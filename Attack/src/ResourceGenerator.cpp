@@ -1,13 +1,13 @@
 #include "ResourceGenerator.h"
 
 ResourceGenerator::ResourceGenerator()
-    : Building(), current(0), capacity(100), productionRate(1),
-      emptyRepr(L""), fullRepr(L"") {}
+    : Building(), current(0), capacity(100), productionRate(5),
+      emptyRepr(""), fullRepr("") {}
 
 ResourceGenerator::ResourceGenerator(Position position, int sizeX, int sizeY,
-                                     std::wstring emptyRepr, std::wstring fullRepr,
-                                     int goldCost, int elixirCost, int maxInstances,
-                                     int health, int capacity, int productionRate)
+                                    const char* emptyRepr, const char* fullRepr,
+                                    int goldCost, int elixirCost, int maxInstances,
+                                    int health, int capacity, int productionRate)
     : Building(position, sizeX, sizeY, emptyRepr, goldCost, elixirCost, maxInstances, health),
       current(0), capacity(capacity), productionRate(productionRate),
       emptyRepr(emptyRepr), fullRepr(fullRepr) {}
@@ -31,19 +31,18 @@ int ResourceGenerator::getCapacity() const {
 int ResourceGenerator::collect() {
     int collected = current;
     current = 0;
-    repr = emptyRepr; // Mettre à jour la représentation
+    repr = emptyRepr;  // Set visual representation to empty
     return collected;
 }
 
 void ResourceGenerator::Update() {
-    // Générer des ressources au fil du temps
-    if (current < capacity) {
+    if (!isDestroyed() && current < capacity) {
         current += productionRate;
         if (current > capacity) {
             current = capacity;
         }
 
-        // Mettre à jour la représentation en fonction de l'état
+        // Update visual representation based on fullness
         if (isFull()) {
             repr = fullRepr;
         } else {

@@ -16,6 +16,9 @@
 #include "Raider.h"
 #include "GoldMine.h"
 #include "ElixirCollector.h"
+#include "Barrack.h"
+#include "Archer.h"
+#include "Barbarian.h"
 
 #define KEY_UP 72
 #define KEY_DOWN 80
@@ -27,6 +30,9 @@
 #define W_KEY 119
 #define C_KEY 99
 #define T_KEY 116
+#define B_KEY 98
+#define A_KEY 97
+#define R_KEY 114
 
 // Variables globales pour le rendu
 HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -105,13 +111,14 @@ void renderScreen() {
     WriteConsoleOutputW(console, charBuffer, bufferSize, bufferCoord, &writeRegion);
 }
 
-void drawBoard(const Board& board, const Player& player, bool placingWalls) {
+// Updated drawBoard function to include troops
+void drawBoard(const Board& board, const Player& player, bool placingWalls, const std::vector<Troop*>& troops) {
     int offsetX = 15;
     int boardWidth = board.getSizeX();
     int infoX = offsetX + boardWidth + 5;
 
     // Ressources
-    setString(infoX, 0, "💰 Gold: " + std::to_wstring(player.getResources().getGold()) + "    ");
+    setString(infoX, 0, L"💰 Gold: " + std::to_wstring(player.getResources().getGold()) + L"    ");
     setString(infoX, 1, L"🔮 Elixir: " + std::to_wstring(player.getResources().getElixir()) + L"    ");
 
     // Contrôles
@@ -120,8 +127,11 @@ void drawBoard(const Board& board, const Player& player, bool placingWalls) {
     setString(infoX, 5, L"G: 🪙 Mine d'or (0 or, 100 élixir)");
     setString(infoX, 6, L"E: 💧 Collecteur d'élixir (100 or, 0 élixir)");
     setString(infoX, 7, L"W: 🧱 Mur (10 or, 0 élixir)");
-    setString(infoX, 8, L"C: 📦 Collecter les ressources");
-    setString(infoX, 9, L"T: 🏰 Construire l'hôtel de ville");
+    setString(infoX, 8, L"B: 🏕️ Caserne (200 or, 0 élixir)");
+    setString(infoX, 9, L"A: 🏹 Archer (0 or, 15 élixir)");
+    setString(infoX, 10, L"R: ⚔️ Barbare (0 or, 10 élixir)");
+    setString(infoX, 11, L"C: 📦 Collecter les ressources");
+    setString(infoX, 12, L"T: 🏛 Construire l'hôtel de ville");
 
     // Dessiner le plateau
     for (int y = 0; y < board.getSizeY(); y++) {
@@ -135,19 +145,34 @@ void drawBoard(const Board& board, const Player& player, bool placingWalls) {
                 continue;
             }
 
+            // Draw player
             if (player.getPosition().X == x && player.getPosition().Y == y) {
-                setChar(screenX, screenY, player.getRepr());
+                setChar(screenX, screenY, player.getRepr()[0]);
                 printed = true;
-            } else {
+            }
+            // Draw enemies
+            else {
                 for (const Enemy* enemy : board.getEnemies()) {
                     if (enemy->getPosition().X == x && enemy->getPosition().Y == y) {
-                        setChar(screenX, screenY, enemy->getRepr());
+                        setChar(screenX, screenY, enemy->getRepr()[0]);
                         printed = true;
                         break;
                     }
                 }
             }
 
+            // Draw troops if not already occupied
+            if (!printed) {
+                for (const Troop* troop : troops) {
+                    if (troop->getPosition().X == x && troop->getPosition().Y == y) {
+                        setChar(screenX, screenY, troop->getRepr()[0]);
+                        printed = true;
+                        break;
+                    }
+                }
+            }
+
+            // Draw buildings if not already occupied
             if (!printed) {
                 for (const Building* b : board.getBuildings()) {
                     if (b->collidesWith(Position(x, y))) {
@@ -155,7 +180,7 @@ void drawBoard(const Board& board, const Player& player, bool placingWalls) {
                         int centerX = topLeft.X;
                         int centerY = topLeft.Y;
                         if (x == centerX && y == centerY) {
-                            setChar(screenX, screenY, b->getRepr());
+                            setChar(screenX, screenY, b->getRepr()[0]);
                         } else {
                             setChar(screenX, screenY, L' ');
                         }
@@ -169,12 +194,13 @@ void drawBoard(const Board& board, const Player& player, bool placingWalls) {
         }
     }
 
-    setString(infoX, 11, L"📊 Statut:");
-    setString(infoX, 12, L"Bâtiments: " + std::to_wstring(board.getBuildings().size()) + L"    ");
-    setString(infoX, 13, L"Ennemis: " + std::to_wstring(board.getEnemies().size()) + L"    ");
+    setString(infoX, 14, L"📊 Statut:");
+    setString(infoX, 15, L"Bâtiments: " + std::to_wstring(board.getBuildings().size()) + L"    ");
+    setString(infoX, 16, L"Troupes: " + std::to_wstring(troops.size()) + L"    ");
+    setString(infoX, 17, L"Ennemis: " + std::to_wstring(board.getEnemies().size()) + L"    ");
 
     if (board.isGameOver()) {
-        setString(infoX, 15, L"💀 GAME OVER - L'hôtel de ville a été détruit!");
+        setString(infoX, 19, L"💀 GAME OVER - L'hôtel de ville a été détruit!");
     }
 
     // Affichage du mode mur
@@ -219,8 +245,28 @@ void configureConsoleForUnicode() {
     SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 }
 
-// Fonction pour gérer les entrées clavier du joueur
-void handlePlayerInput(Board& board, Player& player, bool& placingWalls) {
+// Function to find a barrack near the player
+Barrack* findNearestBarrack(const Board& board, const Player& player) {
+    for (Building* building : board.getBuildings()) {
+        Barrack* barrack = dynamic_cast<Barrack*>(building);
+        if (barrack) {
+            // Check if player is adjacent to the barrack
+            Position playerPos = player.getPosition();
+            Position barrackPos = barrack->getPosition();
+
+            int dx = abs(playerPos.X - barrackPos.X);
+            int dy = abs(playerPos.Y - barrackPos.Y);
+
+            if (dx <= 2 && dy <= 2) {
+                return barrack;
+            }
+        }
+    }
+    return nullptr;
+}
+
+// Updated function to handle player input including troop training
+void handlePlayerInput(Board& board, Player& player, bool& placingWalls, std::vector<Troop*>& troops) {
     if (_kbhit()) {
         int key = _getch();
         if (key == 224) {
@@ -248,25 +294,74 @@ void handlePlayerInput(Board& board, Player& player, bool& placingWalls) {
                 if (board.AddBuilding(newGM)) player.getResources().spendElixir(100);
                 else delete newGM;
             }
-            if (key == E_KEY && player.getResources().canAfford(100, 0)) {
+            else if (key == E_KEY && player.getResources().canAfford(100, 0)) {
                 ElixirCollector* newEC = new ElixirCollector(player.getPosition());
                 if (board.AddBuilding(newEC)) player.getResources().spendGold(100);
                 else delete newEC;
             }
-            if (key == W_KEY) {
+            else if (key == W_KEY) {
                 placingWalls = !placingWalls; // Toggle wall mode
             }
-            if (key == C_KEY) player.collectResources(board);
-            if (key == T_KEY) {
+            else if (key == C_KEY) player.collectResources(board);
+            else if (key == T_KEY) {
                 TownHall* newTH = new TownHall(player.getPosition());
                 if (!board.AddBuilding(newTH)) delete newTH;
+            }
+            else if (key == B_KEY && player.getResources().canAfford(200, 0)) {
+                Barrack* newBarrack = new Barrack(player.getPosition());
+                if (board.AddBuilding(newBarrack)) player.getResources().spendGold(200);
+                else delete newBarrack;
+            }
+            else if (key == A_KEY && player.getResources().canAfford(0, 15)) {
+                // Find the nearest barrack
+                Barrack* barrack = findNearestBarrack(board, player);
+                if (barrack) {
+                    // Train an archer
+                    Position archerPos = barrack->getPosition();
+                    // Place archer adjacent to barrack
+                    archerPos.X += 1;
+
+                    Archer* archer = new Archer(archerPos);
+                    troops.push_back(archer);
+                    player.getResources().spendElixir(15);
+                }
+            }
+            else if (key == R_KEY && player.getResources().canAfford(0, 10)) {
+                // Find the nearest barrack
+                Barrack* barrack = findNearestBarrack(board, player);
+                if (barrack) {
+                    // Train a barbarian
+                    Position barbarianPos = barrack->getPosition();
+                    // Place barbarian adjacent to barrack
+                    barbarianPos.X += 1;
+
+                    Barbarian* barbarian = new Barbarian(barbarianPos);
+                    troops.push_back(barbarian);
+                    player.getResources().spendElixir(10);
+                }
             }
         }
     }
 }
 
-// Fonction pour mettre à jour l'état du jeu
-void updateGameState(Board& board, int& resourceTimer) {
+// Function to update troops
+void updateTroops(Board& board, std::vector<Troop*>& troops) {
+    // Remove dead troops
+    auto it = troops.begin();
+    while (it != troops.end()) {
+        if (!(*it)->isAlive()) {
+            delete *it;
+            it = troops.erase(it);
+        } else {
+            // Update living troops
+            (*it)->Update(board);
+            ++it;
+        }
+    }
+}
+
+// Updated function to update game state including troops
+void updateGameState(Board& board, std::vector<Troop*>& troops, int& resourceTimer) {
     resourceTimer++;
     if (resourceTimer >= 10) {
         resourceTimer = 0;
@@ -274,6 +369,9 @@ void updateGameState(Board& board, int& resourceTimer) {
             building->Update();
         }
     }
+
+    // Update troops
+    updateTroops(board, troops);
 
     // Mise à jour du plateau (ennemis, bâtiments détruits, etc.)
     board.Update();
@@ -290,11 +388,20 @@ void initializeGame(Board& board, Player& player) {
     GoldMine* gm = new GoldMine(Position(centerX - 4, centerY));
     ElixirCollector* ec = new ElixirCollector(Position(centerX + 2, centerY));
     TownHall* th = new TownHall(Position(centerX, centerY + 5));
+    Barrack* barrack = new Barrack(Position(centerX, centerY - 5));
 
     // Ajout des bâtiments au plateau
     board.AddBuilding(gm);
     board.AddBuilding(ec);
     board.AddBuilding(th);
+    board.AddBuilding(barrack);
+}
+
+void cleanupTroops(std::vector<Troop*>& troops) {
+    for (Troop* troop : troops) {
+        delete troop;
+    }
+    troops.clear();
 }
 
 int main() {
@@ -317,6 +424,7 @@ int main() {
     // Création et initialisation des objets principaux du jeu
     Board board(70, 20);
     Player player(Position(5, 5));
+    std::vector<Troop*> troops;
 
     // Initialiser le jeu
     initializeGame(board, player);
@@ -327,7 +435,7 @@ int main() {
     int resourceTimer = 0;
 
     // Initialiser le buffer d'écran
-    initScreenBuffer(board.getSizeX() + 60, board.getSizeY() + 20);
+    initScreenBuffer(board.getSizeX() + 70, board.getSizeY() + 20);
 
     // Variables pour la boucle de jeu et la gestion du temps
     DWORD lastUpdateTime = GetTickCount();
@@ -347,10 +455,10 @@ int main() {
         lastUpdateTime = currentTime;
 
         // Gérer les entrées du joueur
-        handlePlayerInput(board, player, placingWalls);
+        handlePlayerInput(board, player, placingWalls, troops);
 
         // Mettre à jour l'état du jeu
-        updateGameState(board, resourceTimer);
+        updateGameState(board, troops, resourceTimer);
 
         // Faire apparaître des ennemis
         spawnEnemies(board, enemyTimer);
@@ -363,7 +471,7 @@ int main() {
         }
 
         // Dessiner le plateau
-        drawBoard(board, player, placingWalls);
+        drawBoard(board, player, placingWalls, troops);
 
         // Afficher le rendu
         renderScreen();
@@ -376,6 +484,7 @@ int main() {
 
     // Libérer les ressources
     delete[] screenBuffer;
+    cleanupTroops(troops);
 
     return 0;
 }
