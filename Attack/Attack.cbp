@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Attack" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/Attack" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+					<Add directory="include" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/Attack" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add directory="include" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+		</Compiler>
+		<Unit filename="include/Board.h" />
+		<Unit filename="include/Building.h" />
+		<Unit filename="include/ElixirCollector.h" />
+		<Unit filename="include/Enemy.h" />
+		<Unit filename="include/Entity.h" />
+		<Unit filename="include/GoldMine.h" />
+		<Unit filename="include/Npc.h" />
+		<Unit filename="include/Player.h" />
+		<Unit filename="include/Position.h" />
+		<Unit filename="include/Raider.h" />
+		<Unit filename="include/ResourceGenerator.h" />
+		<Unit filename="include/Resources.h" />
+		<Unit filename="include/TownHall.h" />
+		<Unit filename="include/Wall.h" />
+		<Unit filename="main.cpp" />
+		<Unit filename="src/Board.cpp" />
+		<Unit filename="src/Building.cpp" />
+		<Unit filename="src/ElixirCollector.cpp" />
+		<Unit filename="src/Enemy.cpp" />
+		<Unit filename="src/Entity.cpp" />
+		<Unit filename="src/GoldMine.cpp" />
+		<Unit filename="src/Npc.cpp" />
+		<Unit filename="src/Player.cpp" />
+		<Unit filename="src/Position.cpp" />
+		<Unit filename="src/Raider.cpp" />
+		<Unit filename="src/ResourceGenerator.cpp" />
+		<Unit filename="src/Resources.cpp" />
+		<Unit filename="src/TownHall.cpp" />
+		<Unit filename="src/Wall.cpp" />
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>
