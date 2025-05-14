@@ -8,7 +8,7 @@
 Enemy::Enemy()
     : Npc(), attackDamage(10), moveSpeed(1) {}
 
-Enemy::Enemy(Position position, std::wstring repr, int health, int attackDamage, int moveSpeed)
+Enemy::Enemy(Position position, const char* repr, int health, int attackDamage, int moveSpeed)
     : Npc(position, repr, health), attackDamage(attackDamage), moveSpeed(moveSpeed) {}
 
 int Enemy::getAttackDamage() const {
@@ -94,7 +94,7 @@ bool Enemy::MoveTowards(Board& board, const Position& target) {
             // Vérifier s'il y a une collision avec un mur
             bool collision = false;
             for (Building* building : board.getBuildings()) {
-                if (building->getRepr() == L"🧱" && building->collidesWith(newPos)) {
+                if ((building->getRepr(), "🧱") == 0 && building->collidesWith(newPos)) {
                     collision = true;
                     break;
                 }
@@ -115,7 +115,7 @@ bool Enemy::MoveTowards(Board& board, const Position& target) {
             // Vérifier s'il y a une collision avec un mur
             bool collision = false;
             for (Building* building : board.getBuildings()) {
-                if (building->getRepr() == L"🧱" && building->collidesWith(newPos)) {
+                if ((building->getRepr(), "🧱") == 0 && building->collidesWith(newPos)) {
                     collision = true;
                     break;
                 }

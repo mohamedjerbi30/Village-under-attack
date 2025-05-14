@@ -7,17 +7,17 @@
 class Entity {
 protected:
     Position position;
-    std::wstring repr; // Utilisation de wstring pour les emojis UTF-8
+    const char* repr; // Changed from std::wstring to const char*
 
 public:
     Entity();
-    Entity(Position position, std::wstring repr);
+    Entity(Position position, const char* repr);
     virtual ~Entity() = default;
 
     Position getPosition() const;
     void setPosition(const Position& pos);
 
-    std::wstring getRepr() const;
+    const char* getRepr() const; // Changed return type
 
     virtual void Update() {};
 };

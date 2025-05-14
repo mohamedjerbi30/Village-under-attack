@@ -5,9 +5,9 @@
 #include "GoldMine.h"
 #include "ElixirCollector.h"
 
-Player::Player() : Entity(Position(0, 0), L"👤"), resources() {}
+Player::Player() : Entity(Position(0, 0), "👤"), resources() {}
 
-Player::Player(Position position) : Entity(position, L"👤"), resources() {}
+Player::Player(Position position) : Entity(position, "👤"), resources() {}
 
 Resources& Player::getResources() {
     return resources;
@@ -25,7 +25,7 @@ bool Player::moving(Board& board, int deltaX, int deltaY) {
     // Vérifier s'il y a une collision avec un bâtiment
     for (Building* building : board.getBuildings()) {
         // Check if building is a wall (we can't walk through walls)
-        if (building->getRepr() == L"🧱" && building->collidesWith(newPosition)) {
+        if (building->getRepr() == "🧱" && building->collidesWith(newPosition)) {
             return false;
         }
     }
@@ -54,4 +54,3 @@ void Player::collectResources(Board& board) {
         }
     }
 }
-

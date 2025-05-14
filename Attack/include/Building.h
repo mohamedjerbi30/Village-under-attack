@@ -3,28 +3,27 @@
 
 #include "Position.h"
 #include "Resources.h"
-#include <string>
 
 class Building {
 protected:
     Position position;
     int sizeX;
     int sizeY;
-    std::wstring repr;
+    const char* repr; // Changed from std::wstring to const char*
     Resources cost;
     int maxInstances;
     int health;
 
 public:
     Building();
-    Building(Position position, int sizeX, int sizeY, std::wstring repr,
+    Building(Position position, int sizeX, int sizeY, const char* repr,
              int goldCost, int elixirCost, int maxInstances, int health);
     virtual ~Building() = default;
 
     Position getPosition() const;
     int getSizeX() const;
     int getSizeY() const;
-    std::wstring getRepr() const;
+    const char* getRepr() const; // Changed return type
     Resources getCost() const;
     int getMaxInstances() const;
     int getHealth() const;

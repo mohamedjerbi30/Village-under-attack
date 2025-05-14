@@ -12,7 +12,7 @@ protected:
 
 public:
     Enemy();
-    Enemy(Position position, std::wstring repr, int health, int attackDamage, int moveSpeed);
+    Enemy(Position position, const char* repr, int health, int attackDamage, int moveSpeed);
     virtual ~Enemy() = default;
 
     int getAttackDamage() const;

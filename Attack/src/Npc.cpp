@@ -2,7 +2,7 @@
 
 Npc::Npc() : Entity(), health(100) {}
 
-Npc::Npc(Position position, std::wstring repr, int health)
+Npc::Npc(Position position, const char* repr, int health)
     : Entity(position, repr), health(health) {}
 
 int Npc::getHealth() const {

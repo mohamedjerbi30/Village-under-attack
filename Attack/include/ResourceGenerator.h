@@ -8,15 +8,15 @@ protected:
     int current;
     int capacity;
     int productionRate;
-    std::wstring emptyRepr;
-    std::wstring fullRepr;
+    const char* emptyRepr; // Changed from std::wstring to const char*
+    const char* fullRepr;  // Changed from std::wstring to const char*
 
 public:
     ResourceGenerator();
     ResourceGenerator(Position position, int sizeX, int sizeY,
-                       std::wstring emptyRepr, std::wstring fullRepr,
-                       int goldCost, int elixirCost, int maxInstances,
-                       int health, int capacity, int productionRate);
+                      const char* emptyRepr, const char* fullRepr,
+                      int goldCost, int elixirCost, int maxInstances,
+                      int health, int capacity, int productionRate);
 
     bool isFull() const;
     bool isEmpty() const;

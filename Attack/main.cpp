@@ -28,21 +28,20 @@
 #define C_KEY 99
 #define T_KEY 116
 
+// Variables globales pour le rendu
 HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
 COORD CursorPosition;
-
-// Tableau pour stocker l'état actuel de l'écran
 std::wstring* screenBuffer = nullptr;
 int bufferWidth = 0;
 int bufferHeight = 0;
 
+// Fonctions pour gérer l'affichage
 void gotoXY(int x, int y) {
     CursorPosition.X = x;
     CursorPosition.Y = y;
     SetConsoleCursorPosition(console, CursorPosition);
 }
 
-// Initialisation du buffer d'écran
 void initScreenBuffer(int width, int height) {
     bufferWidth = width;
     bufferHeight = height;
@@ -57,21 +56,18 @@ void initScreenBuffer(int width, int height) {
     }
 }
 
-// Met à jour un caractère dans le buffer
 void setChar(int x, int y, wchar_t ch) {
     if (x >= 0 && x < bufferWidth && y >= 0 && y < bufferHeight) {
         screenBuffer[y][x] = ch;
     }
 }
 
-// Met à jour un caractère dans le buffer (surcharge pour std::wstring)
 void setChar(int x, int y, const std::wstring& str) {
     if (x >= 0 && x < bufferWidth && y >= 0 && y < bufferHeight && !str.empty()) {
         screenBuffer[y][x] = str[0];
     }
 }
 
-// Met à jour une chaîne dans le buffer
 void setString(int x, int y, const std::wstring& str) {
     if (y >= 0 && y < bufferHeight) {
         for (int i = 0; i < static_cast<int>(str.length()) && x + i < bufferWidth; i++) {
@@ -80,7 +76,6 @@ void setString(int x, int y, const std::wstring& str) {
     }
 }
 
-// Affiche tout le buffer à l'écran
 void renderScreen() {
     static CHAR_INFO* charBuffer = nullptr;
     static COORD bufferSize = { 0, 0 };
@@ -110,13 +105,13 @@ void renderScreen() {
     WriteConsoleOutputW(console, charBuffer, bufferSize, bufferCoord, &writeRegion);
 }
 
-void drawBoard(Board& board, Player& player) {
+void drawBoard(const Board& board, const Player& player, bool placingWalls) {
     int offsetX = 15;
     int boardWidth = board.getSizeX();
     int infoX = offsetX + boardWidth + 5;
 
     // Ressources
-    setString(infoX, 0, L"💰 Gold: " + std::to_wstring(player.getResources().getGold()) + L"    ");
+    setString(infoX, 0, "💰 Gold: " + std::to_wstring(player.getResources().getGold()) + "    ");
     setString(infoX, 1, L"🔮 Elixir: " + std::to_wstring(player.getResources().getElixir()) + L"    ");
 
     // Contrôles
@@ -181,6 +176,9 @@ void drawBoard(Board& board, Player& player) {
     if (board.isGameOver()) {
         setString(infoX, 15, L"💀 GAME OVER - L'hôtel de ville a été détruit!");
     }
+
+    // Affichage du mode mur
+    setString(0, board.getSizeY() + 3, placingWalls ? L"🧱 Mode construction de mur: ACTIVÉ" : L"🧱 Mode construction de mur: DÉSACTIVÉ");
 }
 
 void spawnEnemies(Board& board, int& enemyTimer) {
@@ -202,7 +200,6 @@ void spawnEnemies(Board& board, int& enemyTimer) {
     }
 }
 
-
 void configureConsoleForUnicode() {
     // Set UTF-8 output code page
     SetConsoleOutputCP(CP_UTF8);
@@ -222,6 +219,84 @@ void configureConsoleForUnicode() {
     SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 }
 
+// Fonction pour gérer les entrées clavier du joueur
+void handlePlayerInput(Board& board, Player& player, bool& placingWalls) {
+    if (_kbhit()) {
+        int key = _getch();
+        if (key == 224) {
+            key = _getch();
+
+            Position before = player.getPosition();
+
+            if (key == KEY_UP) player.moving(board, 0, -1);
+            else if (key == KEY_DOWN) player.moving(board, 0, 1);
+            else if (key == KEY_LEFT) player.moving(board, -1, 0);
+            else if (key == KEY_RIGHT) player.moving(board, 1, 0);
+
+            // Place wall if moving and wall mode is active
+            if (placingWalls && player.getResources().canAfford(10, 0)) {
+                Wall* newWall = new Wall(player.getPosition());
+                if (board.AddBuilding(newWall)) {
+                    player.getResources().spendGold(10);
+                } else {
+                    delete newWall;
+                }
+            }
+        } else {
+            if (key == G_KEY && player.getResources().canAfford(0, 100)) {
+                GoldMine* newGM = new GoldMine(player.getPosition());
+                if (board.AddBuilding(newGM)) player.getResources().spendElixir(100);
+                else delete newGM;
+            }
+            if (key == E_KEY && player.getResources().canAfford(100, 0)) {
+                ElixirCollector* newEC = new ElixirCollector(player.getPosition());
+                if (board.AddBuilding(newEC)) player.getResources().spendGold(100);
+                else delete newEC;
+            }
+            if (key == W_KEY) {
+                placingWalls = !placingWalls; // Toggle wall mode
+            }
+            if (key == C_KEY) player.collectResources(board);
+            if (key == T_KEY) {
+                TownHall* newTH = new TownHall(player.getPosition());
+                if (!board.AddBuilding(newTH)) delete newTH;
+            }
+        }
+    }
+}
+
+// Fonction pour mettre à jour l'état du jeu
+void updateGameState(Board& board, int& resourceTimer) {
+    resourceTimer++;
+    if (resourceTimer >= 10) {
+        resourceTimer = 0;
+        for (Building* building : board.getBuildings()) {
+            building->Update();
+        }
+    }
+
+    // Mise à jour du plateau (ennemis, bâtiments détruits, etc.)
+    board.Update();
+}
+
+// Fonction pour initialiser le jeu
+void initializeGame(Board& board, Player& player) {
+    board.setPlayer(&player);
+
+    int centerX = board.getSizeX() / 2;
+    int centerY = board.getSizeY() / 2;
+
+    // Création des bâtiments initiaux
+    GoldMine* gm = new GoldMine(Position(centerX - 4, centerY));
+    ElixirCollector* ec = new ElixirCollector(Position(centerX + 2, centerY));
+    TownHall* th = new TownHall(Position(centerX, centerY + 5));
+
+    // Ajout des bâtiments au plateau
+    board.AddBuilding(gm);
+    board.AddBuilding(ec);
+    board.AddBuilding(th);
+}
+
 int main() {
     // Configuration optimisée pour l'Unicode et les émojis
     configureConsoleForUnicode();
@@ -230,38 +305,37 @@ int main() {
     std::wcout << L"   Appuyez sur une touche pour commencer... ⌨️\n";
     _getch();
 
+    // Cacher le curseur
     CONSOLE_CURSOR_INFO cursorInfo;
     GetConsoleCursorInfo(console, &cursorInfo);
     cursorInfo.bVisible = false;
     SetConsoleCursorInfo(console, &cursorInfo);
 
+    // Initialisation du générateur de nombre aléatoire
     srand(static_cast<unsigned int>(time(nullptr)));
 
+    // Création et initialisation des objets principaux du jeu
     Board board(70, 20);
     Player player(Position(5, 5));
-    board.setPlayer(&player);
 
-    int centerX = board.getSizeX() / 2;
-    int centerY = board.getSizeY() / 2;
+    // Initialiser le jeu
+    initializeGame(board, player);
 
-    GoldMine* gm = new GoldMine(Position(centerX - 4, centerY));
-    ElixirCollector* ec = new ElixirCollector(Position(centerX + 2, centerY));
-    TownHall* th = new TownHall(Position(centerX, centerY + 5));
-
-    board.AddBuilding(gm);
-    board.AddBuilding(ec);
-    board.AddBuilding(th);
-
+    // Variables de jeu
     bool placingWalls = false;
     int enemyTimer = 0;
     int resourceTimer = 0;
 
+    // Initialiser le buffer d'écran
     initScreenBuffer(board.getSizeX() + 60, board.getSizeY() + 20);
 
+    // Variables pour la boucle de jeu et la gestion du temps
     DWORD lastUpdateTime = GetTickCount();
-    const DWORD targetFrameTime = 50;
+    const DWORD targetFrameTime = 50; // 20 FPS
 
+    // Boucle principale du jeu
     while (!board.isGameOver()) {
+        // Gestion du timing pour maintenir un framerate constant
         DWORD currentTime = GetTickCount();
         DWORD elapsedTime = currentTime - lastUpdateTime;
 
@@ -272,78 +346,35 @@ int main() {
         }
         lastUpdateTime = currentTime;
 
-        if (_kbhit()) {
-            int key = _getch();
-            if (key == 224) {
-                key = _getch();
+        // Gérer les entrées du joueur
+        handlePlayerInput(board, player, placingWalls);
 
-                Position before = player.getPosition();
+        // Mettre à jour l'état du jeu
+        updateGameState(board, resourceTimer);
 
-                if (key == KEY_UP) player.moving(board, 0, -1);
-                else if (key == KEY_DOWN) player.moving(board, 0, 1);
-                else if (key == KEY_LEFT) player.moving(board, -1, 0);
-                else if (key == KEY_RIGHT) player.moving(board, 1, 0);
-
-                // Place wall if moving and wall mode is active
-                if (placingWalls && player.getResources().canAfford(10, 0)) {
-                    Wall* newWall = new Wall(player.getPosition());
-                    if (board.AddBuilding(newWall)) {
-                        player.getResources().spendGold(10);
-                    } else {
-                        delete newWall;
-                    }
-                }
-
-            } else {
-                if (key == G_KEY && player.getResources().canAfford(0, 100)) {
-                    GoldMine* newGM = new GoldMine(player.getPosition());
-                    if (board.AddBuilding(newGM)) player.getResources().spendElixir(100);
-                    else delete newGM;
-                }
-                if (key == E_KEY && player.getResources().canAfford(100, 0)) {
-                    ElixirCollector* newEC = new ElixirCollector(player.getPosition());
-                    if (board.AddBuilding(newEC)) player.getResources().spendGold(100);
-                    else delete newEC;
-                }
-                if (key == W_KEY) {
-                    placingWalls = !placingWalls; // Toggle wall mode
-                }
-                if (key == C_KEY) player.collectResources(board);
-                if (key == T_KEY) {
-                    TownHall* newTH = new TownHall(player.getPosition());
-                    if (!board.AddBuilding(newTH)) delete newTH;
-                }
-            }
-        }
-
-        resourceTimer++;
-        if (resourceTimer >= 10) {
-            resourceTimer = 0;
-            for (Building* building : board.getBuildings()) {
-                building->Update();
-            }
-        }
-
+        // Faire apparaître des ennemis
         spawnEnemies(board, enemyTimer);
 
+        // Effacer le buffer
         for (int y = 0; y < bufferHeight; y++) {
             for (int x = 0; x < bufferWidth; x++) {
                 screenBuffer[y][x] = L' ';
             }
         }
 
-        drawBoard(board, player);
+        // Dessiner le plateau
+        drawBoard(board, player, placingWalls);
 
-        // Optional: show wall mode status
-        setString(0, board.getSizeY() + 3, placingWalls ? L"🧱 Mode construction de mur: ACTIVÉ" : L"🧱 Mode construction de mur: DÉSACTIVÉ");
-
+        // Afficher le rendu
         renderScreen();
     }
 
+    // Afficher le message de fin de jeu
     setString(30, board.getSizeY() + 6, L"💀 GAME OVER - Appuyez sur une touche pour quitter...");
     renderScreen();
     _getch();
 
+    // Libérer les ressources
     delete[] screenBuffer;
 
     return 0;

@@ -9,7 +9,7 @@ protected:
 
 public:
     Npc();
-    Npc(Position position, std::wstring repr, int health);
+    Npc(Position position, const char* repr, int health);
     virtual ~Npc() = default;
 
     int getHealth() const;

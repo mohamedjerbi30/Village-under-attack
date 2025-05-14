@@ -1,10 +1,10 @@
 #include "Building.h"
 
 Building::Building()
-    : position(0, 0), sizeX(1), sizeY(1), repr(L""),
+    : position(0, 0), sizeX(1), sizeY(1), repr(""),
       cost(0, 0), maxInstances(0), health(100) {}
 
-Building::Building(Position position, int sizeX, int sizeY, std::wstring repr,
+Building::Building(Position position, int sizeX, int sizeY, const char* repr,
                    int goldCost, int elixirCost, int maxInstances, int health)
     : position(position), sizeX(sizeX), sizeY(sizeY), repr(repr),
       cost(goldCost, elixirCost), maxInstances(maxInstances), health(health) {}
@@ -21,7 +21,7 @@ int Building::getSizeY() const {
     return sizeY;
 }
 
-std::wstring Building::getRepr() const {
+const char* Building::getRepr() const {
     return repr;
 }
 
