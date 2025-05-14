@@ -253,36 +253,26 @@
 1746272394 source:c:\users\moham\desktop\attack\src\wall.cpp
 	"Wall.h"
 
-1747233106 source:c:\users\moham\desktop\attack-on-titan\attack\main.cpp
+1747237194 source:c:\users\moham\desktop\attack-on-titan\attack\main.cpp
 	<iostream>
-	<thread>
-	<chrono>
 	<cstdlib>
 	<ctime>
-	<vector>
+	<chrono>
+	<thread>
 	<string>
-	<memory>
-	<cctype>
-	<cstring>
-	"include/Position.h"
-	"include/Resources.h"
-	"include/Entity.h"
-	"include/Npc.h"
-	"include/Building.h"
-	"include/ResourceGenerator.h"
-	"include/GoldMine.h"
-	"include/ElixirCollector.h"
-	"include/TownHall.h"
-	"include/Wall.h"
-	"include/Barrack.h"
-	"include/Troop.h"
-	"include/Archer.h"
-	"include/Barbarian.h"
-	"include/Enemy.h"
-	"include/Raider.h"
-	"include/Player.h"
-	"include/Board.h"
+	<locale>
+	<codecvt>
+	<vector>
+	<conio.h>
 	<windows.h>
+	"Board.h"
+	"Player.h"
+	"TownHall.h"
+	"GoldMine.h"
+	"ElixirCollector.h"
+	"Wall.h"
+	"Raider.h"
+	"Position.h"
 
 1746272394 c:\users\moham\desktop\attack-on-titan\attack\include\board.h
 	<vector>
@@ -329,13 +319,12 @@
 1746272392 c:\users\moham\desktop\attack-on-titan\attack\include\elixircollector.h
 	"ResourceGenerator.h"
 
-1746272394 source:c:\users\moham\desktop\attack-on-titan\attack\src\board.cpp
-	"Board.h"
-	"Building.h"
-	"TownHall.h"
-	"Player.h"
-	"Enemy.h"
-	<algorithm>
+1747233981 source:c:\users\moham\desktop\attack-on-titan\attack\src\board.cpp
+	"../include/Board.h"
+	"../include/Building.h"
+	"../include/Enemy.h"
+	"../include/Player.h"
+	"../include/TownHall.h"
 
 1747231965 source:c:\users\moham\desktop\attack-on-titan\attack\src\building.cpp
 	"Building.h"

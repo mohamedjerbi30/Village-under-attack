@@ -1,378 +1,505 @@
 #include <iostream>
-#include <thread>
-#include <chrono>
 #include <cstdlib>
 #include <ctime>
-#include <vector>
+#include <chrono>
+#include <thread>
 #include <string>
-#include <memory>
-#include <cctype>
-#include <cstring>
-
-// Include all header files
-#include "include/Position.h"
-#include "include/Resources.h"
-#include "include/Entity.h"
-#include "include/Npc.h"
-#include "include/Building.h"
-#include "include/ResourceGenerator.h"
-#include "include/GoldMine.h"
-#include "include/ElixirCollector.h"
-#include "include/TownHall.h"
-#include "include/Wall.h"
-#include "include/Barrack.h"
-#include "include/Troop.h"
-#include "include/Archer.h"
-#include "include/Barbarian.h"
-#include "include/Enemy.h"
-#include "include/Raider.h"
-#include "include/Player.h"
-#include "include/Board.h"
-
-// Console utilities for display
-#ifdef _WIN32
+#include <locale>
+#include <codecvt>
+#include <vector>
+#include <conio.h>
 #include <windows.h>
-#define CLEAR_SCREEN "cls"
-#else
-#define CLEAR_SCREEN "clear"
+#ifdef _WIN32
+
 #endif
 
-// Function to clear the console screen
-void clearScreen() {
-    system(CLEAR_SCREEN);
+#include "Board.h"
+#include "Player.h"
+#include "TownHall.h"
+#include "GoldMine.h"
+#include "ElixirCollector.h"
+#include "Wall.h"
+#include "Raider.h"
+#include "Position.h"
+
+// Configuration du jeu
+const int BOARD_WIDTH = 60;
+const int BOARD_HEIGHT = 20;
+const int INFO_PANEL_WIDTH = 30;
+const int TOTAL_WIDTH = BOARD_WIDTH + INFO_PANEL_WIDTH;
+const int SPAWN_ENEMY_INTERVAL = 20; // Intervalle en ticks pour faire apparaître un ennemi
+const int UPDATE_INTERVAL_MS = 200;  // Intervalle de mise à jour en millisecondes
+
+// Pour Windows, on configure la console pour afficher les emojis UTF-8
+void setupConsole() {
+#ifdef _WIN32
+    // Activer la prise en charge Unicode pour la console Windowss
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+
+    // Configuration des polices pour l'affichage des emojis
+    CONSOLE_FONT_INFOEX cfi;
+    cfi.cbSize = sizeof(cfi);
+    cfi.nFont = 0;
+    cfi.dwFontSize.X = 0;
+    cfi.dwFontSize.Y = 16;
+    cfi.FontFamily = FF_DONTCARE;
+    cfi.FontWeight = FW_NORMAL;
+    wcscpy(cfi.FaceName, L"Consolas");
+    SetCurrentConsoleFontEx(GetStdHandle(STD_OUTPUT_HANDLE), FALSE, &cfi);
+#endif
 }
 
-// Function to render the game board
+// Effacer l'écran de manière portable
+void clearScreen() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
+// Placer le curseur à une position spécifique
+void setCursorPosition(int x, int y) {
+#ifdef _WIN32
+    COORD coord;
+    coord.X = x;
+    coord.Y = y;
+    SetConsoleCursorPosition(GetStdHandle(STD_OUTPUT_HANDLE), coord);
+#else
+    printf("\033[%d;%dH", y + 1, x + 1);
+#endif
+}
+
+// Cache le curseur
+void hideCursor() {
+#ifdef _WIN32
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = FALSE;
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
+#else
+    printf("\033[?25l");
+#endif
+}
+
+// Affiche le curseur
+void showCursor() {
+#ifdef _WIN32
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = TRUE;
+    SetConsoleCursorInfo(GetStdHandle(STD_OUTPUT_HANDLE), &info);
+#else
+    printf("\033[?25h");
+#endif
+}
+
+// Dessiner la bordure du jeu
+void drawBorder(int width, int height) {
+    // Coin supérieur gauche
+    setCursorPosition(0, 0);
+    std::cout << "┌";
+
+    // Bordure supérieure
+    for (int x = 1; x < width - 1; x++) {
+        setCursorPosition(x, 0);
+        std::cout << "─";
+    }
+
+    // Coin supérieur droit
+    setCursorPosition(width - 1, 0);
+    std::cout << "┐";
+
+    // Bordure gauche
+    for (int y = 1; y < height - 1; y++) {
+        setCursorPosition(0, y);
+        std::cout << "│";
+    }
+
+    // Bordure droite
+    for (int y = 1; y < height - 1; y++) {
+        setCursorPosition(width - 1, y);
+        std::cout << "│";
+    }
+
+    // Coin inférieur gauche
+    setCursorPosition(0, height - 1);
+    std::cout << "└";
+
+    // Bordure inférieure
+    for (int x = 1; x < width - 1; x++) {
+        setCursorPosition(x, height - 1);
+        std::cout << "─";
+    }
+
+    // Coin inférieur droit
+    setCursorPosition(width - 1, height - 1);
+    std::cout << "┘";
+
+    // Séparation entre la zone de jeu et le panneau d'information
+    for (int y = 0; y < height; y++) {
+        setCursorPosition(BOARD_WIDTH, y);
+        if (y == 0) {
+            std::cout << "┬";
+        } else if (y == height - 1) {
+            std::cout << "┴";
+        } else {
+            std::cout << "│";
+        }
+    }
+}
+
+// Initialisation du plateau de jeu
+void initializeBoard(Board& board) {
+    // Position centrale pour l'hôtel de ville
+    int centerX = BOARD_WIDTH / 2;
+    int centerY = BOARD_HEIGHT / 2;
+
+    // Ajouter l'hôtel de ville
+    TownHall* townHall = new TownHall(Position(centerX - 2, centerY - 2));
+    board.AddBuilding(townHall);
+
+    // Ajouter une mine d'or
+    GoldMine* goldMine = new GoldMine(Position(centerX - 10, centerY - 3));
+    board.AddBuilding(goldMine);
+
+    // Ajouter un collecteur d'élixir
+    ElixirCollector* elixirCollector = new ElixirCollector(Position(centerX + 5, centerY - 3));
+    board.AddBuilding(elixirCollector);
+}
+
+// Afficher le plateau de jeu
 void renderBoard(const Board& board) {
-    const int sizeX = board.getSizeX();
-    const int sizeY = board.getSizeY();
-
-    // Create a 2D grid for the board
-    std::vector<std::vector<const char*>> grid(sizeY, std::vector<const char*>(sizeX, " "));
-
-    // Draw the border
-    for (int x = 0; x < sizeX; x++) {
-        grid[0][x] = "-";
-        grid[sizeY - 1][x] = "-";
+    // Nettoyage de la zone de jeu (sans effacer les bordures)
+    for (int y = 1; y < BOARD_HEIGHT - 1; y++) {
+        for (int x = 1; x < BOARD_WIDTH - 1; x++) {
+            setCursorPosition(x, y);
+            std::cout << " ";
+        }
     }
 
-    for (int y = 0; y < sizeY; y++) {
-        grid[y][0] = "|";
-        grid[y][sizeX - 1] = "|";
-    }
-
-    // Draw buildings
-    const std::vector<Building*>& buildings = board.getBuildings();
-    for (const Building* building : buildings) {
+    // Affichage des bâtiments
+    for (Building* building : board.getBuildings()) {
         if (building->isDestroyed()) continue;
 
         Position pos = building->getPosition();
         int sizeX = building->getSizeX();
         int sizeY = building->getSizeY();
-        const char* repr = building->getRepr();
 
-        // For buildings larger than 1x1, just mark the top-left corner
-        grid[pos.Y][pos.X] = repr;
+        // Afficher le bâtiment
+        for (int y = 0; y < sizeY; y++) {
+            for (int x = 0; x < sizeX; x++) {
+                // Vérifier que la position est dans les limites de la carte
+                if (pos.X + x > 0 && pos.Y + y > 0 &&
+                    pos.X + x < BOARD_WIDTH - 1 && pos.Y + y < BOARD_HEIGHT - 1) {
+                    setCursorPosition(pos.X + x, pos.Y + y);
 
-        // For large buildings, fill the area
-        for (int y = 0; y < sizeY && pos.Y + y < board.getSizeY(); y++) {
-            for (int x = 0; x < sizeX && pos.X + x < board.getSizeX(); x++) {
-                grid[pos.Y + y][pos.X + x] = repr;
+                    // Afficher différemment selon la position dans le bâtiment
+                    if (x == sizeX / 2 && y == sizeY / 2) {
+                        std::cout << building->getRepr();
+                    } else {
+                        std::cout << "*";
+                    }
+                }
             }
         }
     }
 
-    // Draw enemies
-    const std::vector<Enemy*>& enemies = board.getEnemies();
-    for (const Enemy* enemy : enemies) {
+    // Affichage des ennemis
+    for (Enemy* enemy : board.getEnemies()) {
         if (!enemy->isAlive()) continue;
 
         Position pos = enemy->getPosition();
-        if (pos.X > 0 && pos.X < sizeX && pos.Y > 0 && pos.Y < sizeY) {
-            grid[pos.Y][pos.X] = enemy->getRepr();
+        // Vérifier que la position est dans les limites de la carte
+        if (pos.X > 0 && pos.Y > 0 && pos.X < BOARD_WIDTH - 1 && pos.Y < BOARD_HEIGHT - 1) {
+            setCursorPosition(pos.X, pos.Y);
+            std::cout << enemy->getRepr();
         }
     }
 
-    // Draw the player
+    // Affichage du joueur
     Player* player = board.getPlayer();
     if (player) {
         Position pos = player->getPosition();
-        if (pos.X > 0 && pos.X < sizeX && pos.Y > 0 && pos.Y < sizeY) {
-            grid[pos.Y][pos.X] = player->getRepr();
+        if (pos.X > 0 && pos.Y > 0 && pos.X < BOARD_WIDTH - 1 && pos.Y < BOARD_HEIGHT - 1) {
+            setCursorPosition(pos.X, pos.Y);
+            std::cout << player->getRepr();
         }
     }
+}
 
-    // Print the grid
-    for (int y = 0; y < sizeY; y++) {
-        for (int x = 0; x < sizeX; x++) {
-            std::cout << grid[y][x];
-        }
-        std::cout << std::endl;
-    }
+// Afficher le panneau d'informations
+void renderInfoPanel(const Board& board, int score) {
+    int startX = BOARD_WIDTH + 2;
+    int startY = 2;
 
-    // Print resources if player exists
+    setCursorPosition(startX, startY);
+    std::cout << "========= INFO =========";
+
+    // Afficher le score
+    setCursorPosition(startX, startY + 2);
+    std::cout << "Score: " << score;
+
+    // Afficher les ressources du joueur
+    Player* player = board.getPlayer();
     if (player) {
-        Resources& res = player->getResources();
-        std::cout << "Gold: " << res.getGold() << " | Elixir: " << res.getElixir() << std::endl;
+        setCursorPosition(startX, startY + 4);
+        std::cout << "Gold: " << player->getResources().getGold();
+
+        setCursorPosition(startX, startY + 5);
+        std::cout << "Elixir: " << player->getResources().getElixir();
     }
 
-    // Print game instructions
-    std::cout << "\nCommands: w/a/s/d - move, c - collect, b - build, t - train troops, q - quit" << std::endl;
+    // Afficher l'état de l'hôtel de ville
+    bool hasTownHall = false;
+    for (Building* building : board.getBuildings()) {
+        TownHall* townHall = dynamic_cast<TownHall*>(building);
+        if (townHall && !townHall->isDestroyed()) {
+            hasTownHall = true;
+            setCursorPosition(startX, startY + 7);
+            std::cout << "TownHall: " << townHall->getHealth() << " HP";
+            break;
+        }
+    }
+
+    if (!hasTownHall) {
+        setCursorPosition(startX, startY + 7);
+        std::cout << "TownHall: DESTROYED";
+    }
+
+    // Compter les entités
+    int goldMines = 0;
+    int elixirCollectors = 0;
+    int walls = 0;
+    int raiders = 0;
+
+    for (Building* building : board.getBuildings()) {
+        if (dynamic_cast<GoldMine*>(building) && !building->isDestroyed()) goldMines++;
+        if (dynamic_cast<ElixirCollector*>(building) && !building->isDestroyed()) elixirCollectors++;
+        if (dynamic_cast<Wall*>(building) && !building->isDestroyed()) walls++;
+    }
+
+    for (Enemy* enemy : board.getEnemies()) {
+        if (dynamic_cast<Raider*>(enemy) && enemy->isAlive()) raiders++;
+    }
+
+    setCursorPosition(startX, startY + 9);
+    std::cout << "Entity counts:";
+    setCursorPosition(startX, startY + 10);
+    std::cout << "- Gold Mines: " << goldMines;
+    setCursorPosition(startX, startY + 11);
+    std::cout << "- Elixir Collectors: " << elixirCollectors;
+    setCursorPosition(startX, startY + 12);
+    std::cout << "- Walls: " << walls;
+    setCursorPosition(startX, startY + 13);
+    std::cout << "- Raiders: " << raiders;
+
+    // Instructions
+    setCursorPosition(startX, startY + 15);
+    std::cout << "== COMMANDES ==";
+    setCursorPosition(startX, startY + 16);
+    std::cout << "Flèches: Déplacer";
+    setCursorPosition(startX, startY + 17);
+    std::cout << "G: Mine d'or (0g, 100e)";
+    setCursorPosition(startX, startY + 18);
+    std::cout << "E: Collecteur élixir (100g, 0e)";
+    setCursorPosition(startX, startY + 19);
+    std::cout << "W: Mur (10g, 0e)";
+    setCursorPosition(startX, startY + 20);
+    std::cout << "C: Collecter ressources";
+    setCursorPosition(startX, startY + 21);
+    std::cout << "Q: Quitter";
 }
 
-// Function to display building options
-void displayBuildingOptions() {
-    std::cout << "Building options:" << std::endl;
-    std::cout << "1. Gold Mine (Cost: 0 Gold, 100 Elixir)" << std::endl;
-    std::cout << "2. Elixir Collector (Cost: 100 Gold, 0 Elixir)" << std::endl;
-    std::cout << "3. Town Hall (Cost: 0 Gold, 0 Elixir)" << std::endl;
-    std::cout << "4. Wall (Cost: 10 Gold, 0 Elixir)" << std::endl;
-    std::cout << "5. Barrack (Cost: 200 Gold, 0 Elixir)" << std::endl;
-    std::cout << "0. Cancel" << std::endl;
-    std::cout << "Enter your choice: ";
-}
+// Faire apparaître un ennemi
+void spawnEnemy(Board& board) {
+    int side = rand() % 4; // 0: haut, 1: droite, 2: bas, 3: gauche
+    Position spawnPos;
 
-// Function to display troop training options
-void displayTroopOptions() {
-    std::cout << "Troop options:" << std::endl;
-    std::cout << "1. Archer (Cost: 0 Gold, 15 Elixir)" << std::endl;
-    std::cout << "2. Barbarian (Cost: 0 Gold, 10 Elixir)" << std::endl;
-    std::cout << "0. Cancel" << std::endl;
-    std::cout << "Enter your choice: ";
-}
-
-// Function to spawn a random raider on the edge of the board
-void spawnRaider(Board& board) {
-    int sizeX = board.getSizeX();
-    int sizeY = board.getSizeY();
-    Position pos;
-
-    // Pick a random edge
-    int edge = rand() % 4;
-
-    switch (edge) {
-        case 0: // Top edge
-            pos.X = 1 + rand() % (sizeX - 2);
-            pos.Y = 1;
+    switch (side) {
+        case 0: // Haut
+            spawnPos = Position(1 + rand() % (BOARD_WIDTH - 3), 1);
             break;
-        case 1: // Right edge
-            pos.X = sizeX - 2;
-            pos.Y = 1 + rand() % (sizeY - 2);
+        case 1: // Droite
+            spawnPos = Position(BOARD_WIDTH - 2, 1 + rand() % (BOARD_HEIGHT - 3));
             break;
-        case 2: // Bottom edge
-            pos.X = 1 + rand() % (sizeX - 2);
-            pos.Y = sizeY - 2;
+        case 2: // Bas
+            spawnPos = Position(1 + rand() % (BOARD_WIDTH - 3), BOARD_HEIGHT - 2);
             break;
-        case 3: // Left edge
-            pos.X = 1;
-            pos.Y = 1 + rand() % (sizeY - 2);
+        case 3: // Gauche
+            spawnPos = Position(1, 1 + rand() % (BOARD_HEIGHT - 3));
             break;
     }
 
-    Raider* raider = new Raider(pos);
+    Raider* raider = new Raider(spawnPos);
     board.AddEnemy(raider);
 }
 
+// Mettre à jour les structures de ressources
+void updateResourceBuildings(Board& board) {
+    for (Building* building : board.getBuildings()) {
+        ResourceGenerator* resourceGen = dynamic_cast<ResourceGenerator*>(building);
+        if (resourceGen) {
+            resourceGen->Update();
+        }
+    }
+}
+
+// Fonction principale
 int main() {
+    // Configuration pour l'affichage des emojis
+    setupConsole();
+
+    // Initialisation du générateur aléatoire
     srand(static_cast<unsigned int>(time(nullptr)));
 
-    // Initialize the game board
-    Board board(50, 20);
+    // Initialisation du jeu
+    Board board(BOARD_WIDTH, BOARD_HEIGHT);
 
-    // Create the player
-    Player* player = new Player(Position(10, 10));
+    // Placer le joueur au centre
+    Player* player = new Player(Position(BOARD_WIDTH / 2, BOARD_HEIGHT / 2 + 5));
     board.setPlayer(player);
 
-    // Add an initial town hall
-    TownHall* townHall = new TownHall(Position(25, 10));
-    board.AddBuilding(townHall);
+    // Initialiser le plateau avec quelques bâtiments
+    initializeBoard(board);
 
-    // Add initial resources
-    GoldMine* goldMine = new GoldMine(Position(20, 10));
-    board.AddBuilding(goldMine);
-
-    ElixirCollector* elixirCollector = new ElixirCollector(Position(30, 10));
-    board.AddBuilding(elixirCollector);
-
-    // Game loop
+    // Variables de jeu
     bool running = true;
-    int gameTime = 0;
-    int raiderSpawnInterval = 50; // Spawn a raider every 50 game ticks
+    int score = 0;
+    int tickCounter = 0;
 
-    while (running) {
+    // Cache le curseur pendant le jeu
+    hideCursor();
+
+    // Boucle principale du jeu
+    while (running && !board.isGameOver()) {
+        // Effacer l'écran et dessiner les bordures
         clearScreen();
-        renderBoard(board);
+        drawBorder(TOTAL_WIDTH, BOARD_HEIGHT);
 
-        // Check if game is over
-        if (board.isGameOver()) {
-            std::cout << "Game Over! The Town Hall was destroyed!" << std::endl;
-            break;
-        }
+        // Mettre à jour les générateurs de ressources
+        updateResourceBuildings(board);
 
-        // Spawn raiders periodically
-        if (gameTime % raiderSpawnInterval == 0 && gameTime > 0) {
-            spawnRaider(board);
-        }
+        // Traiter les entrées utilisateur (non-bloquant)
+        if (_kbhit()) {
+            char key = _getch();
 
-        // Handle player input
-        std::cout << "Enter command: ";
-        char input;
-        std::cin >> input;
-        input = std::tolower(input);
+            switch (key) {
+                case 'q':
+                case 'Q':
+                    running = false;
+                    break;
 
-        switch (input) {
-            case 'w': // Move up
-                player->moving(board, 0, -1);
-                break;
-            case 'a': // Move left
-                player->moving(board, -1, 0);
-                break;
-            case 's': // Move down
-                player->moving(board, 0, 1);
-                break;
-            case 'd': // Move right
-                player->moving(board, 1, 0);
-                break;
-            case 'c': // Collect resources
-                player->collectResources(board);
-                break;
-            case 'b': // Build a structure
-                displayBuildingOptions();
-                int buildingChoice;
-                std::cin >> buildingChoice;
-
-                if (buildingChoice > 0 && buildingChoice <= 5) {
-                    Position buildPos = player->getPosition();
-                    buildPos.X += 1; // Build to the right of the player
-
-                    Building* newBuilding = nullptr;
-
-                    switch (buildingChoice) {
-                        case 1: // Gold Mine
-                            newBuilding = new GoldMine(buildPos);
-                            break;
-                        case 2: // Elixir Collector
-                            newBuilding = new ElixirCollector(buildPos);
-                            break;
-                        case 3: // Town Hall
-                            newBuilding = new TownHall(buildPos);
-                            break;
-                        case 4: // Wall
-                            newBuilding = new Wall(buildPos);
-                            break;
-                        case 5: // Barrack
-                            newBuilding = new Barrack(buildPos);
-                            break;
-                    }
-
-                    if (newBuilding) {
-                        Resources& res = player->getResources();
-                        Resources cost = newBuilding->getCost();
-
-                        if (res.canAfford(cost.getGold(), cost.getElixir())) {
-                            if (board.AddBuilding(newBuilding)) {
-                                res.spendGold(cost.getGold());
-                                res.spendElixir(cost.getElixir());
-                                std::cout << "Building placed successfully!" << std::endl;
-                            } else {
-                                std::cout << "Cannot place building there!" << std::endl;
-                                delete newBuilding;
-                            }
+                case 'g':
+                case 'G':
+                    // Construire une mine d'or
+                    if (player->getResources().canAfford(0, 100)) {
+                        GoldMine* goldMine = new GoldMine(player->getPosition());
+                        if (board.AddBuilding(goldMine)) {
+                            player->getResources().spendElixir(100);
+                            score += 50;
                         } else {
-                            std::cout << "Not enough resources!" << std::endl;
-                            delete newBuilding;
+                            delete goldMine;
                         }
                     }
-                }
-                break;
-            case 't': // Train troops
+                    break;
+
+                case 'e':
+                case 'E':
+                    // Construire un collecteur d'élixir
+                    if (player->getResources().canAfford(100, 0)) {
+                        ElixirCollector* elixirCollector = new ElixirCollector(player->getPosition());
+                        if (board.AddBuilding(elixirCollector)) {
+                            player->getResources().spendGold(100);
+                            score += 50;
+                        } else {
+                            delete elixirCollector;
+                        }
+                    }
+                    break;
+
+                case 'w':
+                case 'W':
+                    // Construire un mur
+                    if (player->getResources().canAfford(10, 0)) {
+                        Wall* wall = new Wall(player->getPosition());
+                        if (board.AddBuilding(wall)) {
+                            player->getResources().spendGold(10);
+                            score += 5;
+                        } else {
+                            delete wall;
+                        }
+                    }
+                    break;
+
+                case 'c':
+                case 'C':
+                    // Collecter des ressources
+                    player->collectResources(board);
+                    break;
+
+                case -32: // Code pour les touches flèches sur Windows
+                case 224: // Code alternatif pour les touches flèches
                 {
-                    // Find a barrack
-                    Barrack* barrack = nullptr;
-                    for (Building* building : board.getBuildings()) {
-                        barrack = dynamic_cast<Barrack*>(building);
-                        if (barrack && !barrack->isDestroyed()) {
+                    char arrowKey = _getch();
+                    // Déplacer le joueur selon la flèche pressée
+                    switch (arrowKey) {
+                        case 72: // Flèche haut
+                            player->moving(board, 0, -1);
                             break;
-                        }
+                        case 80: // Flèche bas
+                            player->moving(board, 0, 1);
+                            break;
+                        case 75: // Flèche gauche
+                            player->moving(board, -1, 0);
+                            break;
+                        case 77: // Flèche droite
+                            player->moving(board, 1, 0);
+                            break;
                     }
-
-                    if (!barrack) {
-                        std::cout << "You need to build a Barrack first!" << std::endl;
-                        std::this_thread::sleep_for(std::chrono::seconds(1));
-                        break;
-                    }
-
-                    displayTroopOptions();
-                    int troopChoice;
-                    std::cin >> troopChoice;
-
-                    if (troopChoice > 0 && troopChoice <= 2) {
-                        Troop* newTroop = nullptr;
-
-                        switch (troopChoice) {
-                            case 1: // Archer
-                                newTroop = new Archer();
-                                break;
-                            case 2: // Barbarian
-                                newTroop = new Barbarian();
-                                break;
-                        }
-
-                        if (newTroop) {
-                            Resources& res = player->getResources();
-                            Resources cost = newTroop->getCost();
-
-                            if (res.canAfford(cost.getGold(), cost.getElixir())) {
-                                if (barrack->Train(newTroop)) {
-                                    res.spendGold(cost.getGold());
-                                    res.spendElixir(cost.getElixir());
-                                    std::cout << "Troop training started!" << std::endl;
-                                } else {
-                                    std::cout << "Barrack is at full capacity!" << std::endl;
-                                    delete newTroop;
-                                }
-                            } else {
-                                std::cout << "Not enough resources!" << std::endl;
-                                delete newTroop;
-                            }
-                        }
-                    }
+                    break;
                 }
-                break;
-            case 'q': // Quit
-                running = false;
-                break;
-            default:
-                std::cout << "Invalid command!" << std::endl;
-                break;
+            }
         }
 
-        // Update game state
+        // Mettre à jour le jeu
         board.Update();
 
-        // Update resources
-        for (Building* building : board.getBuildings()) {
-            ResourceGenerator* generator = dynamic_cast<ResourceGenerator*>(building);
-            if (generator) {
-                generator->Update();
-            }
-
-            // Update barracks to deploy troops
-            Barrack* barrack = dynamic_cast<Barrack*>(building);
-            if (barrack) {
-                barrack->Update(board);
-            }
+        // Faire apparaître un ennemi selon l'intervalle défini
+        if (++tickCounter >= SPAWN_ENEMY_INTERVAL) {
+            spawnEnemy(board);
+            tickCounter = 0;
         }
 
-        // Short delay to make the game playable
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // Afficher le plateau et le panneau d'informations
+        renderBoard(board);
+        renderInfoPanel(board, score);
 
-        gameTime++;
+        // Pause pour éviter une utilisation trop intensive du CPU
+        std::this_thread::sleep_for(std::chrono::milliseconds(UPDATE_INTERVAL_MS));
     }
 
-    std::cout << "Thanks for playing!" << std::endl;
+    // Fin du jeu, afficher un message
+    clearScreen();
+    setCursorPosition(BOARD_WIDTH / 2 - 10, BOARD_HEIGHT / 2);
 
-    // Clean up
+    if (board.isGameOver()) {
+        std::cout << "GAME OVER! Votre score final: " << score;
+    } else {
+        std::cout << "Jeu terminé. Votre score: " << score;
+    }
+
+    setCursorPosition(BOARD_WIDTH / 2 - 15, BOARD_HEIGHT / 2 + 2);
+    std::cout << "Appuyez sur une touche pour quitter...";
+
+    // Réafficher le curseur
+    showCursor();
+
+    // Attendre une touche avant de quitter
+    _getch();
+
+    // Nettoyage des ressources
     delete player;
 
     return 0;
