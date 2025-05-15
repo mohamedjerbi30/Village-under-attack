@@ -1,12 +1,17 @@
-#ifndef ELIXIR_COLLECTOR_H
-#define ELIXIR_COLLECTOR_H
+#ifndef ELIXIRCOLLECTOR_H
+#define ELIXIRCOLLECTOR_H
+#include "Resources.h"
+#include <ResourceGenerator.h>
 
-#include "ResourceGenerator.h"
 
-class ElixirCollector : public ResourceGenerator {
-public:
-    ElixirCollector();
-    ElixirCollector(Position position);
+class ElixirCollector : public ResourceGenerator
+{
+    public:
+        ElixirCollector(Position p);
+        virtual ~ElixirCollector();
+        Resources Collect();
+        virtual const char* getRepr() const override;
 };
 
-#endif // ELIXIR_COLLECTOR_H
+#endif // ELIXIRCOLLECTOR_H
+

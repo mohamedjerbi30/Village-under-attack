@@ -34,7 +34,11 @@
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
 		</Compiler>
+		<Unit filename="include/Archer.h" />
+		<Unit filename="include/Barbarian.h" />
+		<Unit filename="include/Barrack.h" />
 		<Unit filename="include/Board.h" />
+		<Unit filename="include/Bomberman.h" />
 		<Unit filename="include/Building.h" />
 		<Unit filename="include/ElixirCollector.h" />
 		<Unit filename="include/Enemy.h" />
@@ -47,9 +51,14 @@
 		<Unit filename="include/ResourceGenerator.h" />
 		<Unit filename="include/Resources.h" />
 		<Unit filename="include/TownHall.h" />
+		<Unit filename="include/Troop.h" />
 		<Unit filename="include/Wall.h" />
 		<Unit filename="main.cpp" />
+		<Unit filename="src/Archer.cpp" />
+		<Unit filename="src/Barbarian.cpp" />
+		<Unit filename="src/Barrack.cpp" />
 		<Unit filename="src/Board.cpp" />
+		<Unit filename="src/Bomberman.cpp" />
 		<Unit filename="src/Building.cpp" />
 		<Unit filename="src/ElixirCollector.cpp" />
 		<Unit filename="src/Enemy.cpp" />
@@ -62,6 +71,7 @@
 		<Unit filename="src/ResourceGenerator.cpp" />
 		<Unit filename="src/Resources.cpp" />
 		<Unit filename="src/TownHall.cpp" />
+		<Unit filename="src/Troop.cpp" />
 		<Unit filename="src/Wall.cpp" />
 		<Extensions />
 	</Project>

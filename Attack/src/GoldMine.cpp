@@ -1,9 +1,21 @@
 #include "GoldMine.h"
+#include "GoldMine.h"
 
-GoldMine::GoldMine()
-    : ResourceGenerator(Position(0, 0), 3, 3, "⛏", "🪙",
-                        0, 100, 3, 200, 100, 5) {}
+GoldMine::GoldMine(Position p)
+    : ResourceGenerator(p, 3, 3,"🪙",Resources(0, 100), 3,150) {}
 
-GoldMine::GoldMine(Position position)
-    : ResourceGenerator(position, 3, 3, "⛏", "🪙",
-                        0, 100, 3, 200, 100, 5) {}
+
+Resources GoldMine::Collect() {
+    int collected = current;
+    current = 0;
+    isFull = false;
+    return Resources(collected, 0);
+}
+
+const char* GoldMine::getRepr() const {
+    return isFull ? "⛏️" : "🪙";
+}
+GoldMine::~GoldMine()
+{
+    //dtor
+}

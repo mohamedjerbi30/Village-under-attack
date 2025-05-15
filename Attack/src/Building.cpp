@@ -1,64 +1,46 @@
 #include "Building.h"
-#include <cstring>
+#include "Board.h"
 
-Building::Building()
-    : position(), sizeX(1), sizeY(1), repr(""), cost(), maxInstances(0), health(100) {}
+Building::Building(Position position, int sX, int sY, const char* r, Resources c, int max, int hp)
+    : p(position), sizeX(sX), sizeY(sY), repr(r), cost(c), maxInstances(max), health(hp) {}
 
-Building::Building(Position position, int sizeX, int sizeY, const char* repr,
-                 int goldCost, int elixirCost, int maxInstances, int health)
-    : position(position), sizeX(sizeX), sizeY(sizeY), repr(repr),
-      cost(goldCost, elixirCost), maxInstances(maxInstances), health(health) {}
+bool Building::collidesWith(Position position) const {
+    int left = p.X - sizeX/2;
+    int right = p.X + sizeX/2;
+    int top = p.Y - sizeY/2;
+    int bottom = p.Y + sizeY/2;
 
-Position Building::getPosition() const {
-    return position;
-}
-
-int Building::getSizeX() const {
-    return sizeX;
-}
-
-int Building::getSizeY() const {
-    return sizeY;
-}
-
-const char* Building::getRepr() const {
-    return repr;
-}
-
-Resources Building::getCost() const {
-    return cost;
-}
-
-int Building::getMaxInstances() const {
-    return maxInstances;
-}
-
-int Building::getHealth() const {
-    return health;
-}
-
-void Building::takeDamage(int damage) {
-    if (damage > 0) {
-        health -= damage;
-        if (health < 0) {
-            health = 0;
-        }
-    }
-}
-
-bool Building::isDestroyed() const {
-    return health <= 0;
-}
-
-bool Building::collidesWith(const Position& pos) const {
-    return (pos.X >= position.X && pos.X < position.X + sizeX &&
-            pos.Y >= position.Y && pos.Y < position.Y + sizeY);
+    return (position.X >= left) && (position.X <= right) &&
+           (position.Y >= top) && (position.Y <= bottom);
 }
 
 bool Building::collidesWith(const Building& other) const {
-    // Check if this building's area overlaps with the other building's area
-    return !(position.X + sizeX <= other.position.X ||
-             other.position.X + other.sizeX <= position.X ||
-             position.Y + sizeY <= other.position.Y ||
-             other.position.Y + other.sizeY <= position.Y);
+    int thisLeft = p.X - sizeX/2;
+    int thisRight = p.X + sizeX/2;
+    int thisTop = p.Y - sizeY/2;
+    int thisBottom = p.Y + sizeY/2;
+
+    int otherLeft = other.p.X - other.sizeX/2;
+    int otherRight = other.p.X + other.sizeX/2;
+    int otherTop = other.p.Y- other.sizeY/2;
+    int otherBottom = other.p.Y + other.sizeY/2;
+
+    return !(thisRight < otherLeft ||
+             thisLeft > otherRight ||
+             thisBottom < otherTop ||
+             thisTop > otherBottom);
 }
+
+void Building::update() {}
+
+void Building::loseHealth(int amount) {
+    health -= amount;
+    if (health < 0) {
+        health = 0; // On évite que la santé devienne négative
+    }
+}
+//ajouté
+bool Building::isAlive() const {
+    return health > 0;
+}
+//ajouté

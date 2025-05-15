@@ -1,30 +1,21 @@
-#ifndef RESOURCE_GENERATOR_H
-#define RESOURCE_GENERATOR_H
+#ifndef RESOURCEGENERATOR_H
+#define RESOURCEGENERATOR_H
+#include "Board.h"
+#include <Building.h>
 
-#include "Building.h"
 
-class ResourceGenerator : public Building {
-protected:
+class ResourceGenerator : public Building
+{
+    protected:
     int current;
     int capacity;
-    int productionRate;
-    const char* emptyRepr; // Changed from std::wstring to const char*
-    const char* fullRepr;  // Changed from std::wstring to const char*
+    bool isFull;
 
-public:
-    ResourceGenerator();
-    ResourceGenerator(Position position, int sizeX, int sizeY,
-                      const char* emptyRepr, const char* fullRepr,
-                      int goldCost, int elixirCost, int maxInstances,
-                      int health, int capacity, int productionRate);
-
-    bool isFull() const;
-    bool isEmpty() const;
-    int getCurrent() const;
-    int getCapacity() const;
-
-    virtual int collect();
-    virtual void Update() override;
+    public:
+        ResourceGenerator(Position p, int sX, int sY, const char* r, Resources cost, int maxInst, int hp);
+        virtual ~ResourceGenerator();
+        void update(const Board& board) ;
+        virtual const char* getRepr() const = 0;
 };
 
-#endif // RESOURCE_GENERATOR_H
+#endif // RESOURCEGENERATOR_H

@@ -1,40 +1,34 @@
-#ifndef BUILDING_H
-#define BUILDING_H
-
+#pragma once
 #include "Position.h"
 #include "Resources.h"
-
+#include <iostream>
+class Board;
 class Building {
 protected:
-    Position position;
+    Position p;
     int sizeX;
     int sizeY;
-    const char* repr; // Changed from std::wstring to const char*
+    const char* repr;
     Resources cost;
     int maxInstances;
     int health;
 
 public:
-    Building();
-    Building(Position position, int sizeX, int sizeY, const char* repr,
-             int goldCost, int elixirCost, int maxInstances, int health);
+    Building(Position position, int sX, int sY, const char* r, Resources c, int max, int hp);
     virtual ~Building() = default;
 
-    Position getPosition() const;
-    int getSizeX() const;
-    int getSizeY() const;
-    const char* getRepr() const; // Changed return type
-    Resources getCost() const;
-    int getMaxInstances() const;
-    int getHealth() const;
-
-    void takeDamage(int damage);
-    bool isDestroyed() const;
-
-    bool collidesWith(const Position& pos) const;
+    bool collidesWith(Position position) const;
     bool collidesWith(const Building& other) const;
+    virtual void update();
 
-    virtual void Update() {};
+    Position getPosition() const { return p; }
+    int getSizeX() const { return sizeX; }
+    int getSizeY() const { return sizeY; }
+    //modifié
+     const char* getRepr() const { return repr; }
+    int getHealth() const { return health; }
+    void loseHealth(int amount);
+    Resources getCost() const {return cost;}
+    int getMaxInstances() const {return maxInstances;}
+    bool isAlive() const;
 };
-
-#endif // BUILDING_H

@@ -1,16 +1,18 @@
 #ifndef POSITION_H
 #define POSITION_H
-
-class Position {
-public:
+#include<cmath>
+class Position
+{   public:
     int X;
     int Y;
+    public:
+        Position(int x=0,int y=0);
+        virtual ~Position();
+        friend bool operator==(const Position& p1, const Position& p2);
+        friend bool operator!=(const Position& p1, const Position& p2);
+        friend Position operator+(const Position& p1, const Position& p2);
+        int manhattanDistance(const Position& other) const;
 
-    Position();
-    Position(int x, int y);
-
-    bool operator==(const Position& other) const;
-    bool operator!=(const Position& other) const;
 };
-
 #endif // POSITION_H
+

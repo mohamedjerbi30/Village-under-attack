@@ -1,25 +1,24 @@
 #ifndef ENTITY_H
 #define ENTITY_H
-
 #include "Position.h"
-#include <string>
 
-class Entity {
-protected:
-    Position position;
-    const char* repr; // Changed from std::wstring to const char*
+class Board;
+class Entity
+{
+    protected:
+        Position position;
+        const char* repr;
 
-public:
-    Entity();
-    Entity(Position position, const char* repr);
-    virtual ~Entity() = default;
+    public:
+        Entity(Position pos, const char* emoji = "👤");
+        virtual ~Entity() = default;
+        Position getPosition() const;
+        virtual const char* getRepr() const;
+        virtual void moving(const Board& board, int dx, int dy);
+        virtual void Update(const Board&)=0;
+        virtual void takeDamage(int damage) = 0;
 
-    Position getPosition() const;
-    void setPosition(const Position& pos);
 
-    const char* getRepr() const; // Changed return type
-
-    virtual void Update() {};
 };
 
 #endif // ENTITY_H

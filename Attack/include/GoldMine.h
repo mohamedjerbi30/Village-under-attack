@@ -1,12 +1,18 @@
-#ifndef GOLD_MINE_H
-#define GOLD_MINE_H
+#ifndef GOLDMINE_H
+#define GOLDMINE_H
+#include "Resources.h"
 
-#include "ResourceGenerator.h"
+#include <ResourceGenerator.h>
 
-class GoldMine : public ResourceGenerator {
-public:
-    GoldMine();
-    GoldMine(Position position);
+
+class GoldMine : public ResourceGenerator
+{
+    public:
+        GoldMine(Position p);
+        virtual ~GoldMine();
+        Resources Collect();
+        const char* getRepr() const override;
 };
 
-#endif // GOLD_MINE_H
+#endif // GOLDMINE_H
+

@@ -1,12 +1,16 @@
-#ifndef TOWN_HALL_H
-#define TOWN_HALL_H
+// TownHall.h
+#ifndef TOWNHALL_H
+#define TOWNHALL_H
 
-#include "Building.h"
+#include "Resources.h"  // Assurez-vous que ce fichier est correct
+#include "Building.h"   // Inclure Building.h avant TownHall, car TownHall hérite de Building
 
 class TownHall : public Building {
 public:
-    TownHall();
-    TownHall(Position position);
+    TownHall(Position p);  // Constructeur avec un paramètre Position
+    virtual ~TownHall();
+    Position getPosition();   // Destructeur virtuel
 };
 
-#endif // TOWN_HALL_H
+#endif // TOWNHALL_H
+

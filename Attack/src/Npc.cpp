@@ -1,23 +1,32 @@
 #include "Npc.h"
 
-Npc::Npc() : Entity(), health(100) {}
+Npc::Npc(Position position, int initialHealth, const char* emoji)
+    : Entity(position, emoji), health(initialHealth) {}
 
-Npc::Npc(Position position, const char* repr, int health)
-    : Entity(position, repr), health(health) {}
 
-int Npc::getHealth() const {
-    return health;
+void Npc::loseHealth(int amount) {
+    health = (health - amount > 0) ? health - amount : 0;
 }
 
-void Npc::takeDamage(int damage) {
-    if (damage > 0) {
-        health -= damage;
-        if (health < 0) {
-            health = 0;
-        }
-    }
+void Npc::moveTowards(const Board& board, Position destination) {
+    Position currentPos = getPosition();
+    int dx = 0, dy = 0;
+
+    if (currentPos.X < destination.X) dx = 1;
+    else if (currentPos.X > destination.X) dx = -1;
+
+    if (currentPos.Y < destination.Y) dy = 1;
+    else if (currentPos.Y > destination.Y) dy = -1;
+
+    moving(board, dx, dy);
 }
 
-bool Npc::isAlive() const {
-    return health > 0;
+void Npc::Update(const Board& board) {
+
+    moveTowards(board, Position(0, 0));
+}
+
+Npc::~Npc()
+{
+    //dtor
 }

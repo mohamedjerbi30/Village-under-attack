@@ -1,32 +1,12 @@
 #include "Resources.h"
 
-Resources::Resources() : gold(400), elixir(400) {}
+Resources::Resources(int initialGold, int initialElixir)
+    : gold(initialGold), elixir(initialElixir) {}
 
-Resources::Resources(int gold, int elixir) : gold(gold), elixir(elixir) {}
-
-int Resources::getGold() const {
-    return gold;
-}
-
-int Resources::getElixir() const {
-    return elixir;
-}
-
-void Resources::addGold(int amount) {
-    if (amount > 0) {
-        gold += amount;
-    }
-}
-
-void Resources::addElixir(int amount) {
-    if (amount > 0) {
-        elixir += amount;
-    }
-}
+void Resources::addGold(int amount) { gold += amount; }
+void Resources::addElixir(int amount) { elixir += amount; }
 
 bool Resources::spendGold(int amount) {
-    if (amount <= 0) return false;
-
     if (gold >= amount) {
         gold -= amount;
         return true;
@@ -35,8 +15,6 @@ bool Resources::spendGold(int amount) {
 }
 
 bool Resources::spendElixir(int amount) {
-    if (amount <= 0) return false;
-
     if (elixir >= amount) {
         elixir -= amount;
         return true;
@@ -44,6 +22,20 @@ bool Resources::spendElixir(int amount) {
     return false;
 }
 
-bool Resources::canAfford(int goldCost, int elixirCost) const {
-    return gold >= goldCost && elixir >= elixirCost;
+int Resources::getGold() const
+{
+    return gold;
 }
+int Resources::getElixir() const
+{
+    return elixir;
+}
+bool Resources::canAfford(const Resources& cost) const {
+    return gold >= cost.gold && elixir >= cost.elixir;
+}
+
+void Resources::consume(const Resources& cost) {
+    gold -= cost.gold;
+    elixir -= cost.elixir;
+}
+

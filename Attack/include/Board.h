@@ -1,44 +1,68 @@
+#pragma once
 #ifndef BOARD_H
 #define BOARD_H
-
-#include <vector>
 #include "Position.h"
-
-class Building;
+#include "Building.h"
+#include "TownHall.h"
+#include "Entity.h"
+#include <vector>
 class Player;
-class Enemy;
-
 class Board {
 private:
-    int sizeX;
-    int sizeY;
+    bool raidersSpawned = false; //ajouté
+    int SizeX;
+    int SizeY;
     std::vector<Building*> buildings;
-    std::vector<Enemy*> enemies;
+    std::vector<Entity*> entities;
+    TownHall* townHall;
     Player* player;
 
+
 public:
-    Board();
+    std::vector<Building*>& getBuildings();
+    void PlaceTownHall() {
+        Position center(SizeX/2, SizeY/2);
+        if (!townHall) {
+            townHall = new TownHall(center);
+            AddBuilding(townHall);
+        }
+    }
     Board(int sizeX, int sizeY);
-    ~Board();
 
-    int getSizeX() const;
-    int getSizeY() const;
+    // Vérifie si une position est hors limites
+    bool IsOutOfBounds(Position pos) const;
 
-    const std::vector<Building*>& getBuildings() const;
-    const std::vector<Enemy*>& getEnemies() const;
-    Player* getPlayer() const;
+    // Compte les bâtiments du même type
+    int CountBuildingType(const Building& targetBuilding) const;
 
-    void setPlayer(Player* player);
+    // Vérifie les collisions avec d'autres bâtiments
+    bool CollidesWith(const Building& newBuilding) const;
 
-    bool AddBuilding(Building* building);
-    void AddEnemy(Enemy* enemy);
+    // Ajoute un bâtiment en respectant les contraintes
+    bool AddBuilding(Building* newBuilding);
 
-    void RemoveDestroyedBuildings();
-    void RemoveDeadEnemies();
+    // Getters
+    int getSizeX() const { return SizeX; }
+    int getSizeY() const { return SizeY; }
+    const std::vector<Building*>& getBuildings() const { return buildings; }
+    Player* getPlayer() const { return player; }
+    TownHall* getTownHall() const { return townHall; }
 
-    bool isGameOver() const;
-
-    void Update();
+    // Setters (optionnels)
+    void setPlayer(Player* p) { player = p; }
+    void setTownHall(TownHall* th) { townHall = th; }
+    bool isPositionValid(const Position&) const;
+    void Draw() const;
+    virtual ~Board();
+    //ajouté
+    void AddEntity(Entity* entity) {
+    // Exemple : tu peux stocker l'entité dans un conteneur
+    entities.push_back(entity); // Assure-toi que entities existe !
+    }
+     const std::vector<Entity*>& getEntities() const {
+        return entities;
+    }
 };
+
 
 #endif // BOARD_H

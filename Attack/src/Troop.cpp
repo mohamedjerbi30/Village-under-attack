@@ -1,147 +1,105 @@
 #include "Troop.h"
+#include "Npc.h"
 #include "Board.h"
-#include "Enemy.h"
 #include <cmath>
-#include <algorithm>
+#include <limits>
 
-Troop::Troop()
-    : Npc(), cost(0, 0), attackDamage(0), attackRange(0), targetedEnemy(nullptr) {}
-
-Troop::Troop(Position position, const char* repr, int health, int attackDamage, int attackRange, int goldCost, int elixirCost)
-    : Npc(position, repr, health), cost(goldCost, elixirCost), attackDamage(attackDamage), attackRange(attackRange), targetedEnemy(nullptr) {}
-
-Resources Troop::getCost() const {
-    return cost;
-}
-
-int Troop::getAttackDamage() const {
-    return attackDamage;
-}
-
-int Troop::getAttackRange() const {
-    return attackRange;
-}
-
-Enemy* Troop::getTargetedEnemy() const {
-    return targetedEnemy;
-}
-
-void Troop::setTargetedEnemy(Enemy* enemy) {
-    targetedEnemy = enemy;
-}
-
-void Troop::Update(Board& board) {
-    if (!isAlive()) return;
-
-    // If we have no target or target is dead, find a new one
-    if (!targetedEnemy || !targetedEnemy->isAlive()) {
-        TargetEnemy(board.getEnemies());
-    }
-
-    // If we have a target, attack or move towards it
-    if (targetedEnemy) {
-        MoveOrAttack(board);
-    }
-}
+Troop::Troop(Position position, int cost, int attackDamage, int health)
+    : Entity(position), Cost(cost), AttackDamage(attackDamage), Health(health), TargetedEnemy(nullptr) {}
 
 void Troop::Attack(Enemy* enemy) {
-    if (enemy && enemy->isAlive()) {
-        enemy->takeDamage(attackDamage);
-        takeDamage(3); // Troops lose 3 health when attacking
+    if (enemy) {
+        enemy->takeDamage(AttackDamage);
+        Health -= 3;
+        if (Health <= 0) {
+            // Gérer la suppression du troop si nécessaire
+        }
     }
 }
-
+void Troop::SetPosition( Position& newPos) {
+    position = newPos; // Met à jour la position de la troupe
+}
 void Troop::MoveOrAttack(Board& board) {
-    if (!targetedEnemy) return;
+    if (!TargetedEnemy) return;
 
-    Position enemyPos = targetedEnemy->getPosition();
-    int dx = abs(position.X - enemyPos.X);
-    int dy = abs(position.Y - enemyPos.Y);
-    int distance = std::max(dx, dy); // Using Chebyshev distance
+    Position enemyPos = TargetedEnemy->getPosition();
+    Position currentPos = getPosition();
 
-    if (distance <= attackRange) {
-        // Enemy is in range, attack
-        Attack(targetedEnemy);
+    int dx = enemyPos.X - currentPos.X;
+    int dy = enemyPos.Y - currentPos.Y;
+    double distance = sqrt(dx * dx + dy * dy);
+
+    if (distance <= 1.0) {
+        Attack(TargetedEnemy);
     } else {
-        // Move towards enemy
-        int moveX = 0, moveY = 0;
+        int stepX = (dx != 0) ? (dx > 0 ? 1 : -1) : 0;
+        int stepY = (dy != 0) ? (dy > 0 ? 1 : -1) : 0;
 
-        if (position.X < enemyPos.X) moveX = 1;
-        else if (position.X > enemyPos.X) moveX = -1;
-
-        if (position.Y < enemyPos.Y) moveY = 1;
-        else if (position.Y > enemyPos.Y) moveY = -1;
-
-        // Try to move
-        Position newPos(position.X + moveX, position.Y + moveY);
-
-        // Check if the new position is valid
-        if (newPos.X > 0 && newPos.X < board.getSizeX() - 1 &&
-            newPos.Y > 0 && newPos.Y < board.getSizeY() - 1) {
-
-            // Check for collisions with buildings
-            bool collision = false;
-            for (Building* building : board.getBuildings()) {
-                if (building->collidesWith(newPos)) {
-                    collision = true;
-                    break;
-                }
-            }
-
-            if (!collision) {
-                position = newPos;
-            }
+        Position newPos(currentPos.X+ stepX, currentPos.Y + stepY);
+        if (board.isPositionValid(newPos)) {
+            SetPosition(newPos);
         }
     }
 }
 
-bool Troop::AnyTroopNearTarget(const std::vector<Npc*>& entities) {
-    if (!targetedEnemy) return false;
+bool Troop::AnyTroopNearerTarget(const std::vector<Npc>& entities) const {
+    if (!TargetedEnemy) return false;
 
-    for (Npc* entity : entities) {
-        Troop* troop = dynamic_cast<Troop*>(entity);
-        if (troop && troop != this && troop->isAlive()) {
-            Position troopPos = troop->getPosition();
-            Position enemyPos = targetedEnemy->getPosition();
+    Position targetPos = TargetedEnemy->getPosition();  // Position de la cible
+    // Utilisation de la distance de Manhattan
+    int currentDistance = getPosition().manhattanDistance(targetPos);
 
-            int dx = abs(troopPos.X - enemyPos.X);
-            int dy = abs(troopPos.Y - enemyPos.Y);
-
-            if (dx <= 1 && dy <= 1) {
-                return true;
-            }
+    for (const Npc& npc : entities) {
+        const Troop* troop = dynamic_cast<const Troop*>(&npc);
+        if (troop && troop != this) {
+            // Utilisation de la distance de Manhattan
+            int d = troop->getPosition().manhattanDistance(targetPos);
+            if (d < currentDistance) return true;  // Si une troupe est plus proche
         }
     }
-
-    return false;
+    return false;  // Aucune troupe plus proche
 }
 
-Enemy* Troop::GetNearestEnemy(const std::vector<Enemy*>& entities) {
+Enemy* Troop::GetNearestEnemy(const std::vector<Npc>& entities) const {
     Enemy* nearest = nullptr;
-    int minDistance = INT_MAX;
+    int minDist = std::numeric_limits<int>::max();  // Utiliser int au lieu de double
 
-    for (Enemy* enemy : entities) {
-        if (enemy->isAlive()) {
-            Position enemyPos = enemy->getPosition();
-            int dx = position.X - enemyPos.X;
-            int dy = position.Y - enemyPos.Y;
-            int distance = dx * dx + dy * dy;  // Squared distance
-
-            if (distance < minDistance) {
-                minDistance = distance;
+    for (const Npc& npc : entities) {
+        Enemy* enemy = dynamic_cast<Enemy*>(const_cast<Npc*>(&npc));
+        if (enemy) {
+            // Utilisation de la distance de Manhattan
+            int d = getPosition().manhattanDistance(enemy->getPosition());
+            if (d < minDist) {
+                minDist = d;
                 nearest = enemy;
             }
         }
     }
-
     return nearest;
 }
 
-void Troop::TargetEnemy(const std::vector<Enemy*>& entities) {
-    if (entities.empty()) {
-        targetedEnemy = nullptr;
-        return;
-    }
 
-    targetedEnemy = GetNearestEnemy(entities);
+void Troop::TargetEnemy(const std::vector<Npc>& entities) {
+    TargetedEnemy = GetNearestEnemy(entities);
+}
+
+void Troop::Update(const Board& board) {
+    // Chercher l'ennemi le plus proche
+    Enemy* nearestEnemy = nullptr;
+    int minDistance = INT_MAX;
+
+    for (Entity* entity : board.getEntities()) {
+        Enemy* enemy = dynamic_cast<Enemy*>(entity);
+        if (enemy) {
+            int distance = position.manhattanDistance(enemy->getPosition());
+            if (distance < minDistance) {
+                minDistance = distance;
+                nearestEnemy = enemy;
+            }
+        }
+    }
+}
+void Troop::takeDamage(int damage) {
+    Health -= damage;
+    if (Health < 0) Health = 0;
 }
