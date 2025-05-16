@@ -521,3 +521,193 @@
 	<cmath>
 	<limits>
 
+1747378672 source:c:\users\moham\desktop\attack\main.cpp
+	<iostream>
+	<conio.h>
+	<windows.h>
+	<vector>
+	<sstream>
+	<ctime>
+	<cstdlib>
+	<algorithm>
+	<chrono>
+	"Board.h"
+	"Player.h"
+	"Building.h"
+	"Wall.h"
+	"TownHall.h"
+	"Raider.h"
+	"GoldMine.h"
+	"ElixirCollector.h"
+	"Barrack.h"
+	"Barbarian.h"
+	"Archer.h"
+	"Bomberman.h"
+
+1747342152 c:\users\moham\desktop\attack\include\board.h
+	"Position.h"
+	"Building.h"
+	"TownHall.h"
+	"Entity.h"
+	<vector>
+
+1747328835 c:\users\moham\desktop\attack\include\position.h
+	<cmath>
+
+1747342152 c:\users\moham\desktop\attack\include\building.h
+	"Position.h"
+	"Resources.h"
+	<iostream>
+
+1747328835 c:\users\moham\desktop\attack\include\resources.h
+
+1747328835 c:\users\moham\desktop\attack\include\townhall.h
+	"Resources.h"
+	"Building.h"
+
+1747328835 c:\users\moham\desktop\attack\include\entity.h
+	"Position.h"
+
+1747328835 c:\users\moham\desktop\attack\include\player.h
+	"Resources.h"
+	"Board.h"
+	<Entity.h>
+	"Raider.h"
+
+1747328836 c:\users\moham\desktop\attack\include\raider.h
+	"Building.h"
+	"Board.h"
+	<vector>
+	<ctime>
+	<Enemy.h>
+
+1747342152 c:\users\moham\desktop\attack\include\enemy.h
+	"Board.h"
+	<Npc.h>
+	<cmath>
+
+1747328835 c:\users\moham\desktop\attack\include\npc.h
+	"Board.h"
+	"Position.h"
+	<Entity.h>
+
+1747328835 c:\users\moham\desktop\attack\include\wall.h
+	"Resources.h"
+	<Building.h>
+
+1747328836 c:\users\moham\desktop\attack\include\goldmine.h
+	"Resources.h"
+	<ResourceGenerator.h>
+
+1747328835 c:\users\moham\desktop\attack\include\resourcegenerator.h
+	"Board.h"
+	<Building.h>
+
+1747328835 c:\users\moham\desktop\attack\include\elixircollector.h
+	"Resources.h"
+	<ResourceGenerator.h>
+
+1747328835 c:\users\moham\desktop\attack\include\barrack.h
+	"Building.h"
+	"Troop.h"
+	<queue>
+
+1747342152 c:\users\moham\desktop\attack\include\troop.h
+	"Entity.h"
+	"Enemy.h"
+	"Position.h"
+	<vector>
+
+1747328835 c:\users\moham\desktop\attack\include\barbarian.h
+	"Troop.h"
+	"Position.h"
+
+1747328835 c:\users\moham\desktop\attack\include\archer.h
+	"Troop.h"
+	"Position.h"
+
+1747328835 c:\users\moham\desktop\attack\include\bomberman.h
+	<Enemy.h>
+
+1747342152 source:c:\users\moham\desktop\attack\src\archer.cpp
+	"Archer.h"
+
+1747328835 source:c:\users\moham\desktop\attack\src\barbarian.cpp
+	"Barbarian.h"
+	"Enemy.h"
+
+1747342152 source:c:\users\moham\desktop\attack\src\barrack.cpp
+	"Barrack.h"
+	"Board.h"
+
+1747328835 source:c:\users\moham\desktop\attack\src\board.cpp
+	"Board.h"
+	"Position.h"
+	"Player.h"
+	<algorithm>
+
+1747328835 source:c:\users\moham\desktop\attack\src\bomberman.cpp
+	"Bomberman.h"
+	"Wall.h"
+
+1747328835 source:c:\users\moham\desktop\attack\src\building.cpp
+	"Building.h"
+	"Board.h"
+
+1747344797 source:c:\users\moham\desktop\attack\src\elixircollector.cpp
+	"ElixirCollector.h"
+
+1747328835 source:c:\users\moham\desktop\attack\src\enemy.cpp
+	"Enemy.h"
+	"Building.h"
+
+1747328835 source:c:\users\moham\desktop\attack\src\entity.cpp
+	"Entity.h"
+	"Board.h"
+
+1747344742 source:c:\users\moham\desktop\attack\src\goldmine.cpp
+	"GoldMine.h"
+	"GoldMine.h"
+
+1747328835 source:c:\users\moham\desktop\attack\src\npc.cpp
+	"Npc.h"
+
+1747342152 source:c:\users\moham\desktop\attack\src\player.cpp
+	"Player.h"
+	"GoldMine.h"
+	"ElixirCollector.h"
+	"Wall.h"
+	"Building.h"
+	"Raider.h"
+	"Troop.h"
+	"Barrack.h"
+
+1747328836 source:c:\users\moham\desktop\attack\src\position.cpp
+	"Position.h"
+	<cstdlib>
+
+1747328835 source:c:\users\moham\desktop\attack\src\raider.cpp
+	"Raider.h"
+	<limits>
+	<ctime>
+	<windows.h>
+
+1747342252 source:c:\users\moham\desktop\attack\src\resourcegenerator.cpp
+	"ResourceGenerator.h"
+
+1747328836 source:c:\users\moham\desktop\attack\src\resources.cpp
+	"Resources.h"
+
+1747344797 source:c:\users\moham\desktop\attack\src\townhall.cpp
+	"TownHall.h"
+
+1747328836 source:c:\users\moham\desktop\attack\src\troop.cpp
+	"Troop.h"
+	"Npc.h"
+	"Board.h"
+	<cmath>
+	<limits>
+
+1747328962 source:c:\users\moham\desktop\attack\src\wall.cpp
+	"Wall.h"
+

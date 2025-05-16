@@ -20,30 +20,30 @@ class Enemy : public Npc
         void Update( Board& board) ;
         virtual ~Enemy();
         void takeDamage(int damage);
-        //ajouté
+        //ajoutï¿½
 
 
         void moveTowards(Position target, const Board& board) {
             Position current = this->getPosition();
             Position next = current;
 
-            // Priorité à l'axe X
+            // Prioritï¿½ ï¿½ l'axe X
             if (target.X > current.X) next.X++;
             else if (target.X < current.X) next.X--;
             else if (target.Y > current.Y) next.Y++;
             else if (target.Y < current.Y) next.Y--;
 
-            // Vérifie que la nouvelle position est valide
+            // Vï¿½rifie que la nouvelle position est valide
             if (!board.IsOutOfBounds(next)) {
                 this->setPosition(next);
             }
         }
-        //ajouté
+        //ajoutï¿½
 
 
        // void setMoveDelay(DWORD delay);//
         bool IsDestroyed() const {
-        return health <= 0;  // Vérifie si la santé est inférieure ou égale à 0
+        return health <= 0;  // Vï¿½rifie si la santï¿½ est infï¿½rieure ou ï¿½gale ï¿½ 0
     }
 
 

@@ -16,7 +16,7 @@ public:
     Enemy* TargetedEnemy;
     int Health;
 
-    // Constructeur protégé
+    // Constructeur protï¿½gï¿½
     Troop(Position position, int cost, int attackDamage, int health);
 
 public:

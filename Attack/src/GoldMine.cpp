@@ -2,7 +2,7 @@
 #include "GoldMine.h"
 
 GoldMine::GoldMine(Position p)
-    : ResourceGenerator(p, 3, 3,"🪙",Resources(0, 100), 3,150) {}
+    : ResourceGenerator(p, 1, 1,"🪙",Resources(0, 100), 3,150) {}
 
 
 Resources GoldMine::Collect() {

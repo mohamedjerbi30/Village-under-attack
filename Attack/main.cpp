@@ -37,6 +37,10 @@
 #define KEY_D 100   // For training barbarians
 #define KEY_ESC 27  // For exit
 
+// Fixed board dimensions
+const int BOARD_WIDTH = 50;
+const int BOARD_HEIGHT = 20;
+
 HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
 COORD CursorPosition;
 
@@ -46,15 +50,9 @@ void gotoXY(int x, int y) {
     SetConsoleCursorPosition(console, CursorPosition);
 }
 
-// Helper function to clear the screen
+// Optimized screen clearing function
 void clearScreen() {
-    COORD topLeft = { 0, 0 };
-    DWORD written;
-    CONSOLE_SCREEN_BUFFER_INFO csbi;
-    GetConsoleScreenBufferInfo(console, &csbi);
-    FillConsoleOutputCharacterA(console, ' ', csbi.dwSize.X * csbi.dwSize.Y, topLeft, &written);
-    FillConsoleOutputAttribute(console, csbi.wAttributes, csbi.dwSize.X * csbi.dwSize.Y, topLeft, &written);
-    SetConsoleCursorPosition(console, topLeft);
+    system("cls");
 }
 
 // Display game instructions
@@ -82,36 +80,38 @@ void displayInstructions() {
     _getch();
 }
 
-// Draw the game board with all entities
+// Draw the game board with fixed dimensions
 void drawBoard(Board& board, Player& player, const std::vector<Raider*>& raiders,
                const std::vector<Bomberman*>& bombermen, const std::vector<Troop*>& troops,
                bool buildingMode, const std::string& buildingType) {
-    clearScreen();
+    // Use gotoXY instead of clearing the entire screen
+    gotoXY(0, 0);
 
-    int boardWidth = board.getSizeX();
-    int boardHeight = board.getSizeY();
+    // Fix board dimensions
+    int boardWidth = BOARD_WIDTH;
+    int boardHeight = BOARD_HEIGHT;
 
     // Draw resources and game information
-    std::cout << "Gold: " << player.getResources().getGold() << "\tElixir: " << player.getResources().getElixir() << std::endl;
+    std::cout << "Gold: " << player.getResources().getGold() << "\tElixir: " << player.getResources().getElixir() << "          " << std::endl;
     std::cout << "Building Mode: " << (buildingMode ? "ON" : "OFF");
     if (buildingMode) {
         std::cout << " - Building: " << buildingType;
     }
-    std::cout << std::endl;
+    std::cout << "          " << std::endl;
 
     // Draw controls reminder
     std::cout << "Controls: B-Build Mode, W-Wall, G-Gold Mine, E-Elixir Collector, T-Town Hall, R-Barracks, ESC-Exit" << std::endl;
     std::cout << "         A-Train Archer, D-Train Barbarian" << std::endl << std::endl;
 
-    // Draw board border
+    // Draw board border with fixed width
     for (int x = 0; x <= boardWidth; x++) {
-        std::cout << "·";
+        std::cout << "#";
     }
     std::cout << std::endl;
 
-    // Draw board content
+    // Draw board content with fixed dimensions
     for (int y = 0; y < boardHeight; y++) {
-        std::cout << "·"; // Left border
+        std::cout << "#"; // Left border
         for (int x = 0; x < boardWidth; x++) {
             Position currentPos(x, y);
             bool printed = false;
@@ -175,12 +175,12 @@ void drawBoard(Board& board, Player& player, const std::vector<Raider*>& raiders
                 std::cout << " ";
             }
         }
-        std::cout << "·" << std::endl; // Right border
+        std::cout << "#" << std::endl; // Right border
     }
 
-    // Draw bottom border
+    // Draw bottom border with fixed width
     for (int x = 0; x <= boardWidth; x++) {
-        std::cout << "·";
+        std::cout << "#";
     }
     std::cout << std::endl;
 
@@ -214,6 +214,11 @@ Barrack* getAdjacentBarrack(const Player& player, const Board& board) {
     return nullptr;
 }
 
+// Check if position is within board boundaries
+bool isWithinBoundaries(int x, int y) {
+    return (x >= 0 && x < BOARD_WIDTH && y >= 0 && y < BOARD_HEIGHT);
+}
+
 // Main function
 int main() {
     // Setup console for UTF-8 emoji display
@@ -223,14 +228,18 @@ int main() {
     cursorInfo.bVisible = false;
     SetConsoleCursorInfo(console, &cursorInfo);
 
+    // Set console buffer size to match board dimensions
+    COORD bufferSize = { BOARD_WIDTH + 3, BOARD_HEIGHT + 10 };
+    SetConsoleScreenBufferSize(console, bufferSize);
+
     // Seed random number generator
     srand(static_cast<unsigned int>(time(nullptr)));
 
     // Display game instructions
     displayInstructions();
 
-    // Initialize game components
-    Board board(50, 20);
+    // Initialize game components with fixed dimensions
+    Board board(BOARD_WIDTH, BOARD_HEIGHT);
     Player player(Position(5, 5));
     board.setPlayer(&player);
 
@@ -254,15 +263,30 @@ int main() {
     std::vector<Bomberman*> bombermen;
     std::vector<Troop*> troops;
 
-    // Game timers
-    unsigned long lastRaiderSpawn = GetTickCount();
-    unsigned long lastBombermanSpawn = GetTickCount();
-    unsigned long lastEnemyUpdate = GetTickCount();
-    unsigned long lastResourceUpdate = GetTickCount();
-    unsigned long lastTroopUpdate = GetTickCount();
+    // Game timers - using high resolution clock for more accurate timing
+    auto lastRaiderSpawn = std::chrono::steady_clock::now();
+    auto lastBombermanSpawn = std::chrono::steady_clock::now();
+    auto lastEnemyUpdate = std::chrono::steady_clock::now();
+    auto lastResourceUpdate = std::chrono::steady_clock::now();
+    auto lastTroopUpdate = std::chrono::steady_clock::now();
+    auto lastFrameTime = std::chrono::steady_clock::now();
+
+    // Target frame rate (30 FPS)
+    const std::chrono::milliseconds frameTime(33);
 
     // Game loop
     while (running) {
+        // Enforce fixed frame rate
+        auto currentTime = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastFrameTime);
+
+        if (elapsed < frameTime) {
+            Sleep(static_cast<DWORD>((frameTime - elapsed).count()));
+            currentTime = std::chrono::steady_clock::now();
+        }
+
+        lastFrameTime = currentTime;
+
         // Check for player input
         if (_kbhit()) {
             int key = _getch();
@@ -270,11 +294,24 @@ int main() {
             // Arrow key input (needs two reads)
             if (key == 224) {
                 key = _getch();
+
+                // Store current position
+                Position currentPos = player.getPosition();
+                Position newPos = currentPos;
+
+                // Calculate new position
                 switch (key) {
-                    case KEY_UP:    player.moving(board, raiders, 0, -1); break;
-                    case KEY_DOWN:  player.moving(board, raiders, 0, 1); break;
-                    case KEY_LEFT:  player.moving(board, raiders, -1, 0); break;
-                    case KEY_RIGHT: player.moving(board, raiders, 1, 0); break;
+                    case KEY_UP:    newPos.Y -= 1; break;
+                    case KEY_DOWN:  newPos.Y += 1; break;
+                    case KEY_LEFT:  newPos.X -= 1; break;
+                    case KEY_RIGHT: newPos.X += 1; break;
+                }
+
+                // Only move if within boundaries
+                if (isWithinBoundaries(newPos.X, newPos.Y)) {
+                    int dx = newPos.X - currentPos.X;
+                    int dy = newPos.Y - currentPos.Y;
+                    player.moving(board, raiders, dx, dy);
                 }
             } else {
                 // Regular key input
@@ -291,12 +328,14 @@ int main() {
                     case KEY_W: // Build Wall
                         if (buildingMode && player.getResources().getGold() >= 10) {
                             Position wallPos = player.getPosition();
-                            Wall* wall = new Wall(wallPos);
-                            if (board.AddBuilding(wall)) {
-                                player.getResources().spendGold(10);
-                                currentBuildingType = "Wall";
-                            } else {
-                                delete wall;
+                            if (isWithinBoundaries(wallPos.X, wallPos.Y)) {
+                                Wall* wall = new Wall(wallPos);
+                                if (board.AddBuilding(wall)) {
+                                    player.getResources().spendGold(10);
+                                    currentBuildingType = "Wall";
+                                } else {
+                                    delete wall;
+                                }
                             }
                         }
                         break;
@@ -304,12 +343,14 @@ int main() {
                     case KEY_G: // Build Gold Mine
                         if (buildingMode && player.getResources().getGold() >= 100) {
                             Position minePos = player.getPosition();
-                            GoldMine* mine = new GoldMine(minePos);
-                            if (board.AddBuilding(mine)) {
-                                player.getResources().spendGold(100);
-                                currentBuildingType = "Gold Mine";
-                            } else {
-                                delete mine;
+                            if (isWithinBoundaries(minePos.X, minePos.Y)) {
+                                GoldMine* mine = new GoldMine(minePos);
+                                if (board.AddBuilding(mine)) {
+                                    player.getResources().spendGold(100);
+                                    currentBuildingType = "Gold Mine";
+                                } else {
+                                    delete mine;
+                                }
                             }
                         }
                         break;
@@ -317,12 +358,14 @@ int main() {
                     case KEY_E: // Build Elixir Collector
                         if (buildingMode && player.getResources().getElixir() >= 100) {
                             Position collectorPos = player.getPosition();
-                            ElixirCollector* collector = new ElixirCollector(collectorPos);
-                            if (board.AddBuilding(collector)) {
-                                player.getResources().spendElixir(100);
-                                currentBuildingType = "Elixir Collector";
-                            } else {
-                                delete collector;
+                            if (isWithinBoundaries(collectorPos.X, collectorPos.Y)) {
+                                ElixirCollector* collector = new ElixirCollector(collectorPos);
+                                if (board.AddBuilding(collector)) {
+                                    player.getResources().spendElixir(100);
+                                    currentBuildingType = "Elixir Collector";
+                                } else {
+                                    delete collector;
+                                }
                             }
                         }
                         break;
@@ -332,13 +375,15 @@ int main() {
                             player.getResources().getGold() >= 200 &&
                             player.getResources().getElixir() >= 200) {
                             Position thPos = player.getPosition();
-                            TownHall* th = new TownHall(thPos);
-                            if (board.AddBuilding(th)) {
-                                player.getResources().spendGold(200);
-                                player.getResources().spendElixir(200);
-                                currentBuildingType = "Town Hall";
-                            } else {
-                                delete th;
+                            if (isWithinBoundaries(thPos.X, thPos.Y)) {
+                                TownHall* th = new TownHall(thPos);
+                                if (board.AddBuilding(th)) {
+                                    player.getResources().spendGold(200);
+                                    player.getResources().spendElixir(200);
+                                    currentBuildingType = "Town Hall";
+                                } else {
+                                    delete th;
+                                }
                             }
                         }
                         break;
@@ -347,13 +392,15 @@ int main() {
                         if (buildingMode && player.getResources().getGold() >= 150 &&
                             player.getResources().getElixir() >= 50) {
                             Position barrackPos = player.getPosition();
-                            Barrack* barrack = new Barrack(barrackPos);
-                            if (board.AddBuilding(barrack)) {
-                                player.getResources().spendGold(150);
-                                player.getResources().spendElixir(50);
-                                currentBuildingType = "Barrack";
-                            } else {
-                                delete barrack;
+                            if (isWithinBoundaries(barrackPos.X, barrackPos.Y)) {
+                                Barrack* barrack = new Barrack(barrackPos);
+                                if (board.AddBuilding(barrack)) {
+                                    player.getResources().spendGold(150);
+                                    player.getResources().spendElixir(50);
+                                    currentBuildingType = "Barrack";
+                                } else {
+                                    delete barrack;
+                                }
                             }
                         }
                         break;
@@ -362,12 +409,25 @@ int main() {
                         {
                             Barrack* barrack = getAdjacentBarrack(player, board);
                             if (barrack != nullptr && player.getResources().getElixir() >= 15) {
-                                Archer* archer = new Archer(barrack->getPosition());
-                                if (barrack->Train(archer)) {
-                                    player.getResources().spendElixir(15);
-                                } else {
-                                    delete archer;
+                                Position archerPos = barrack->getPosition();
+                                // Find a valid spawn position
+                                for (int dx = -1; dx <= 1; dx++) {
+                                    for (int dy = -1; dy <= 1; dy++) {
+                                        if (dx == 0 && dy == 0) continue;
+                                        Position spawnPos(archerPos.X + dx, archerPos.Y + dy);
+                                        if (isWithinBoundaries(spawnPos.X, spawnPos.Y)) {
+                                            Archer* archer = new Archer(spawnPos);
+                                            if (barrack->Train(archer)) {
+                                                player.getResources().spendElixir(15);
+                                                troops.push_back(archer);
+                                                goto archerTrained; // Exit nested loops
+                                            } else {
+                                                delete archer;
+                                            }
+                                        }
+                                    }
                                 }
+                                archerTrained: ; // Label for goto
                             }
                         }
                         break;
@@ -376,12 +436,25 @@ int main() {
                         {
                             Barrack* barrack = getAdjacentBarrack(player, board);
                             if (barrack != nullptr && player.getResources().getElixir() >= 3) {
-                                Barbarian* barbarian = new Barbarian(barrack->getPosition());
-                                if (barrack->Train(barbarian)) {
-                                    player.getResources().spendElixir(3);
-                                } else {
-                                    delete barbarian;
+                                Position barbarianPos = barrack->getPosition();
+                                // Find a valid spawn position
+                                for (int dx = -1; dx <= 1; dx++) {
+                                    for (int dy = -1; dy <= 1; dy++) {
+                                        if (dx == 0 && dy == 0) continue;
+                                        Position spawnPos(barbarianPos.X + dx, barbarianPos.Y + dy);
+                                        if (isWithinBoundaries(spawnPos.X, spawnPos.Y)) {
+                                            Barbarian* barbarian = new Barbarian(spawnPos);
+                                            if (barrack->Train(barbarian)) {
+                                                player.getResources().spendElixir(3);
+                                                troops.push_back(barbarian);
+                                                goto barbarianTrained; // Exit nested loops
+                                            } else {
+                                                delete barbarian;
+                                            }
+                                        }
+                                    }
                                 }
+                                barbarianTrained: ; // Label for goto
                             }
                         }
                         break;
@@ -389,11 +462,8 @@ int main() {
             }
         }
 
-        // Current time for updates
-        unsigned long currentTime = GetTickCount();
-
         // Update resources (every 2 seconds)
-        if (currentTime - lastResourceUpdate >= 2000) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastResourceUpdate).count() >= 2000) {
             for (Building* building : board.getBuildings()) {
                 // Update gold mines
                 GoldMine* goldMine = dynamic_cast<GoldMine*>(building);
@@ -420,65 +490,71 @@ int main() {
         }
 
         // Spawn a Raider (every 12 seconds)
-        if (currentTime - lastRaiderSpawn >= 12000) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastRaiderSpawn).count() >= 12000) {
             // Spawn at a random edge position
             int x, y;
             int edge = rand() % 4; // 0: top, 1: right, 2: bottom, 3: left
 
             switch (edge) {
                 case 0: // top
-                    x = rand() % (board.getSizeX() - 2) + 1;
+                    x = rand() % (BOARD_WIDTH - 2) + 1;
                     y = 1;
                     break;
                 case 1: // right
-                    x = board.getSizeX() - 2;
-                    y = rand() % (board.getSizeY() - 2) + 1;
+                    x = BOARD_WIDTH - 2;
+                    y = rand() % (BOARD_HEIGHT - 2) + 1;
                     break;
                 case 2: // bottom
-                    x = rand() % (board.getSizeX() - 2) + 1;
-                    y = board.getSizeY() - 2;
+                    x = rand() % (BOARD_WIDTH - 2) + 1;
+                    y = BOARD_HEIGHT - 2;
                     break;
                 case 3: // left
                     x = 1;
-                    y = rand() % (board.getSizeY() - 2) + 1;
+                    y = rand() % (BOARD_HEIGHT - 2) + 1;
                     break;
             }
 
-            raiders.push_back(new Raider(Position(x, y)));
+            // Ensure spawn position is within boundaries
+            if (isWithinBoundaries(x, y)) {
+                raiders.push_back(new Raider(Position(x, y)));
+            }
             lastRaiderSpawn = currentTime;
         }
 
         // Spawn a Bomberman (every 20 seconds)
-        if (currentTime - lastBombermanSpawn >= 20000) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastBombermanSpawn).count() >= 20000) {
             // Spawn at a random edge position
             int x, y;
             int edge = rand() % 4; // 0: top, 1: right, 2: bottom, 3: left
 
             switch (edge) {
                 case 0: // top
-                    x = rand() % (board.getSizeX() - 2) + 1;
+                    x = rand() % (BOARD_WIDTH - 2) + 1;
                     y = 1;
                     break;
                 case 1: // right
-                    x = board.getSizeX() - 2;
-                    y = rand() % (board.getSizeY() - 2) + 1;
+                    x = BOARD_WIDTH - 2;
+                    y = rand() % (BOARD_HEIGHT - 2) + 1;
                     break;
                 case 2: // bottom
-                    x = rand() % (board.getSizeX() - 2) + 1;
-                    y = board.getSizeY() - 2;
+                    x = rand() % (BOARD_WIDTH - 2) + 1;
+                    y = BOARD_HEIGHT - 2;
                     break;
                 case 3: // left
                     x = 1;
-                    y = rand() % (board.getSizeY() - 2) + 1;
+                    y = rand() % (BOARD_HEIGHT - 2) + 1;
                     break;
             }
 
-            bombermen.push_back(new Bomberman(Position(x, y)));
+            // Ensure spawn position is within boundaries
+            if (isWithinBoundaries(x, y)) {
+                bombermen.push_back(new Bomberman(Position(x, y)));
+            }
             lastBombermanSpawn = currentTime;
         }
 
         // Update enemies (every 1 second)
-        if (currentTime - lastEnemyUpdate >= 1000) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastEnemyUpdate).count() >= 1000) {
             // Update raiders
             for (auto raider_it = raiders.begin(); raider_it != raiders.end();) {
                 (*raider_it)->Update(board);
@@ -509,7 +585,7 @@ int main() {
         }
 
         // Update troops (every 1 second)
-        if (currentTime - lastTroopUpdate >= 1000) {
+        if (std::chrono::duration_cast<std::chrono::milliseconds>(currentTime - lastTroopUpdate).count() >= 1000) {
             // Update barracks to train troops
             for (Building* building : board.getBuildings()) {
                 Barrack* barrack = dynamic_cast<Barrack*>(building);
@@ -558,9 +634,17 @@ int main() {
 
                         // Only move in one direction at a time (prevent diagonal movement)
                         if (rand() % 2 == 0 && dx != 0) {
-                            (*troop_it)->moving(board, dx, 0);
+                            // Check if new position is within boundaries
+                            Position newPos(currentPos.X + dx, currentPos.Y);
+                            if (isWithinBoundaries(newPos.X, newPos.Y)) {
+                                (*troop_it)->moving(board, dx, 0);
+                            }
                         } else if (dy != 0) {
-                            (*troop_it)->moving(board, 0, dy);
+                            // Check if new position is within boundaries
+                            Position newPos(currentPos.X, currentPos.Y + dy);
+                            if (isWithinBoundaries(newPos.X, newPos.Y)) {
+                                (*troop_it)->moving(board, 0, dy);
+                            }
                         }
                     }
                 }
@@ -608,9 +692,6 @@ int main() {
 
         // Draw the game board
         drawBoard(board, player, raiders, bombermen, troops, buildingMode, currentBuildingType);
-
-        // Small delay to prevent high CPU usage
-        Sleep(50);
     }
 
     // Clean up game entities

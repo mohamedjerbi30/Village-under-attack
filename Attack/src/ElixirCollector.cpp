@@ -1,7 +1,7 @@
 #include "ElixirCollector.h"
 
 ElixirCollector::ElixirCollector(Position p)
-    : ResourceGenerator(p, 3, 3,"🔮",Resources(0, 100),3,150) {}
+    : ResourceGenerator(p, 1, 1,"🔮",Resources(0, 100),3,150) {}
 
 Resources ElixirCollector::Collect() {
     int collected = current;

@@ -24,7 +24,7 @@ public:
     Position getPosition() const { return p; }
     int getSizeX() const { return sizeX; }
     int getSizeY() const { return sizeY; }
-    //modifié
+    //modifiï¿½
      const char* getRepr() const { return repr; }
     int getHealth() const { return health; }
     void loseHealth(int amount);

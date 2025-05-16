@@ -119,4 +119,3 @@ void Player::takeDamage(int) {
     // Le joueur ne prend pas de dégâts
 }
 
-
